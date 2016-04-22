@@ -1,12 +1,3 @@
-#!/usr/bin/env python2.7
-"""
-uses rpy2 python library to create a namespace for R functions underlying iterativeWGCNA
-"""
-
-from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
-
-rSnippetDefinitions = """
-
 suppressPackageStartupMessages(require(WGCNA))
 suppressPackageStartupMessages(require(igraph))
 
@@ -174,11 +165,3 @@ getDroppedGeneExpression <- function(dataFile, keptDataFile, targetDir) {
     dropped <- all[setdiff(row.names(all), row.names(kept)), ]
     write.table(dropped, paste(targetDir, "pass-initial-gene-expression.txt", sep="/"), quote=F)
 }
-
-"""
-
-pyWGCNA = SignatureTranslatedAnonymousPackage(rSnippetDefinitions, "pyWGCNA")
-
-
-__author__ = "Emily Greenfest-Allen"
-__copyright__ = "Copyright 2015, University of Pennsylvania"
