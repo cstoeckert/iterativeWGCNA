@@ -202,6 +202,8 @@ def processBlocks(data, blocks, runId, targetDir, verbose):
     return (runConverged, algConverged)
 
 def processRun(data, passId, runId,args):
+    # TODO -- revise for new convergence conditions
+
     targetDir= createDir(args.outputFilePath + "/pass" + str(passId) + "/run" + str(runId))
 
     genes = data.rownames
@@ -267,6 +269,7 @@ def iWGCNA(args):
             key = "pass" + str(passId) + "_run" + str(runId)
 
             passConverged, algConverged = processRun(data, key, targetDir, args)
+
             data = getExpressionSubset(exprData, result, iterationIndex, True) # set data to classified genes
 
 if __name__ == "__main__":
