@@ -51,9 +51,18 @@ def parameter_list(strValue):
     pairs = strValue.split(',')
     for p in pairs:
         name, value = p.split('=')
+
+        if value in ['TRUE', 'T', 'True', 't']:
+            value = True
+        if value in ['FALSE', 'F', 'False', 'f']:
+            value = False
+
         params[name] = value
 
-    params["numericLabels"] = True
+    # if a preference for module labels is not provided
+    # by the user, set WGCNA to return numeric labels
+    if "numericLabels" not in params:
+        params["numericLabels"] = True
 
     return params
 
@@ -73,8 +82,6 @@ def create_dir(dirName):
         os.stat(dirName)
     except OSError:
         os.mkdir(dirName)
-    finally:
-        warning("Output directory", dirName, "exists.")
 
     return dirName
 
@@ -131,14 +138,16 @@ def read_data(inputFile):
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
-    exprData = ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names=1) 
+    exprData = ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names=1)
     return utils.numeric2real(exprData)
 
-
-def initialize_workspace(allowWGCNAThreads):
-	if allowWGCNAThreads:
-		wgcna.allowWGCNAThreads()
-
+def initialize_r_workspace(args):
+    '''
+    initialize the r working environment
+    '''
+    if args.allowWGCNAThreads:
+        wgcna.allowWGCNAThreads()
+    base.setwd(args.outputFilePath)
 
 # iWGCNA
 # ========================
@@ -193,12 +202,14 @@ def process_run(data, iteration, args):
     run wgcna
     '''
 
+    # generate the parameters to the blockwiseModules call
     params = {}
     if args.wgcnaParameters is not None:
         params = args.wgcnaParameters
-    params['datExpr'] = data
+
+    params['datExpr'] = base.t(data) # have to transpose before passing to WGCNA
     params['saveTOMFileBase'] = iteration
-    warning(params)
+
     blocks = wgcna.blockwiseModules(**params)
     warning(blocks)
 
@@ -220,7 +231,7 @@ def iWGCNA(args):
     iteration = iteration + "_" + str(runId)
 
     exprData = read_data(args.inputFile)
-    
+
 
 
     result = None
@@ -264,9 +275,14 @@ if __name__ == "__main__":
     try:
         cml_args = parse_command_line_args()
         create_dir(cml_args.outputFilePath)
-        initialize_workspace(cml_args.allowWGCNAThreads)
+        initialize_r_workspace(cml_args)
 
-   
+        if cml_args.verbose:
+            warning("Working directory:", cml_args.outputFilePath)
+            warning("Allowing WGCNA Threads?", "TRUE" if cml_args.allowWGCNAThreads else "FALSE")
+            warning("Running WGCNA with the following parameters")
+            warning(cml_args.wgcnaParameters)
+
         iWGCNA(cml_args)
 
     finally:
