@@ -17,61 +17,92 @@ import argparse
 import os
 import sys
 import rpy2.robjects as ro
-import pandas as pd
-import pandas.rpy.common as pdc
-import rSnippets
+from rpy2.robjects.packages import importr, SignatureTranslatedAnonymousPackage
+import rSnippets as rs
 
-# Globals
+# R Package Imports
 # ========================
 
-r_paste = ro.r['paste']
-r_t = ro.r['t']
-r_gsub = ro.r['gsub']
+wgcna = importr('WGCNA')
+igraph = importr('igraph')
+base = importr('base')
+utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
+
+
+# Parameter Types
+# ========================
+def restricted_float(value):
+    '''
+        for argument parsing; restricts float value from 0 to 1
+    '''
+    value = float(value)
+    if value < 0.0 or value > 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(value,))
+    return value
+
+def parameter_list(strValue):
+    '''
+    for argument parsing;
+    converts a comma separated list of 'param=value' pairs
+    into a parm:value hash
+    '''
+
+    params = {}
+    pairs = strValue.split(',')
+    for p in pairs:
+        name, value = p.split('=')
+        params[name] = value
+
+    params["numericLabels"] = True
+
+    return params
 
 # Utilities
 # ========================
-def restricted_float(x):
-    '''
-    for argument parsing; restricts float value from 0 to 1
-    '''
-    x = float(x)
-    if x < 0.0 or x > 1.0:
-        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
-    return x
-
-
 def warning(prefix, *objs):
     '''
     wrapper for writing to stderr
     '''
     print(prefix, *objs, file=sys.stderr)
 
-def createDir(dirName):
+def create_dir(dirName):
     '''
     check if directory exists in the path, if not create
     '''
-
     try:
         os.stat(dirName)
-    except:
+    except OSError:
         os.mkdir(dirName)
+    finally:
+        warning("Output directory", dirName, "exists.")
 
     return dirName
 
 
-def parseCommandLineArgs():
+def helpEpilog():
     '''
-    parse command line args
+    text for help epilog
     '''
+
+    inputFileFormatHelp = """ INPUT FILE FORMAT: TBA """
+    wgcnaParametersHelp = """ PARAMETERS: DESCRIBE FORMATS AND DEFAULTS """
+
+    return inputFileFormatHelp + "\n\n" + wgcnaParametersHelp
+
+def parse_command_line_args():
+    '''
+        parse command line args
+        '''
 
     parser = argparse.ArgumentParser(prog="iWGCNA",
                                      description="perform interative WGCNA analysis",
-                                     epilog="input file format TBA",
+                                     epilog=helpEpilog(),
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('-i', '--inputFile',
                         metavar='<gene expression file>',
                         help="full path to input gene expression file",
-                        required = True)
+                        required=True)
 
     parser.add_argument('-o', '--outputFilePath',
                         help="target directory for output files",
@@ -79,84 +110,40 @@ def parseCommandLineArgs():
                         default=os.getcwd())
 
     parser.add_argument('-v', '--verbose',
-                        help = 'print status messages',
+                        help='print status messages',
                         action="store_true")
 
-    # WGCNA parameters
-    parser.add_argument('--randomSeed',
-                        metavar='<seed>',
-                        help="integer for seeding random number generator; see WGCNA manual",
-                        type=int,
-                        default=12345)
+    parser.add_argument('-p', '--wgcnaParameters',
+                        help="comma separated list of parameters to be passed to WGCNA's " +
+                        "blockwiseModules function; " +
+                        "e.g., power=6,randomSeed=1234875; " +
+                        " see WGCNA manual",
+                        type=parameter_list)
 
-    parser.add_argument('--power',
-                        metavar='<power>',
-                        help="soft-thresholding power for network construction; see WGCNA manual",
-                        type=int,
-                        default = 6)
-
-    parser.add_argument('--networkType',
-                        metavar='<type>',
-                        help="type of adjacency matrix; see WGCNA manual",
-                        choices=["signed", "unsigned"],
-                        default = "signed")
-
-    parser.add_argument('--maxBlockSize',
-                        metavar='<size>',
-                        help="maximmum block size for module detection; see WGCNA manual",
-                        type=int,
-                        default=5000)
-
-    parser.add_argument('--TOMType',
-                        metavar='<type>',
-                        help="type of topological overlap matrix to be calculated; see WGCNA manual",
-                        default="signed",
-                        choices=['none', 'signed', 'unsigned'])
-
-    parser.add_argument('--minModuleSize',
-                        metavar='<size>',
-                        help="minimum module size; see WGCNA manual",
-                        default=20,
-                        type=int)
-
-
-    parser.add_argument('--deepSplit',
-                        metavar='<split>',
-                        help="sensitivity of module detection (cutting of tree height); see WGCNA manual",
-                        default=0,
-                        type=int,
-                        choices = [0, 1, 2, 3, 4])
-
-    parser.add_argument('--minCoreKME',
-                        metavar='<cutoff>',
-                        help="minimum eigengene connectivity [0, 1.0]; see WGCNA manual",
-                        default=0.8,
-                        type=restricted_float)
-
-    parser.add_argument('--minCoreKMESize',
-                        metavar='<size>',
-                        help="minimum number of genes with minCoreKME value to keep module; see WGCNA manual",
-                        default=15,
-                        type=int)
     parser.add_argument('--allowWGCNAThreads',
                         action="store_true")
 
+
     return parser.parse_args()
 
-def readData(inputFile):
+def read_data(inputFile):
     '''
     read gene expression data into a data frame
+    and convert numeric (integer) data to real
     '''
-    return ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names = 1)
+    exprData = ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names=1) 
+    return utils.numeric2real(exprData)
 
+
+def initialize_workspace(allowWGCNAThreads):
+	if allowWGCNAThreads:
+		wgcna.allowWGCNAThreads()
 
 
 # iWGCNA
 # ========================
 
-# def processPass(a)
-
-def saveRObject(data, objName, path, fileName):
+def save_r_object(data, objName, path, fileName):
     '''
     (rename) and save an R object to the specified file path as an .RData file
     :param data: the R object
@@ -166,15 +153,15 @@ def saveRObject(data, objName, path, fileName):
     '''
 
     fileName = path + '/' + fileName
-    rSnippets.pyWGCNA.saveObject(data, objName, fileName)
+    rs.wgcna.saveObject(data, objName, fileName)
 
-def writeEigengenes(blocks, samples, runId, outputDirPath):
+def write_eigengenes(blocks, samples, runId, outputDirPath):
     '''
     write eigengenes to file
     '''
-    return rSnippets.pyWGCNA.processEigengenes(blocks, samples, runId, outputDirPath)
+    return rs.wgcna.processEigengenes(blocks, samples, runId, outputDirPath)
 
-def processBlocks(data, blocks, runId, targetDir, verbose):
+def process_blocks(data, blocks, runId, targetDir, verbose):
     '''
     evaluate blocks by extracting eigengenes,
     calculating eigengene similarities,
@@ -187,7 +174,7 @@ def processBlocks(data, blocks, runId, targetDir, verbose):
     if verbose:
         warning("Writing Eigengenes")
 
-    eigengenes = writeEigengenes(blocks, data.colnames, runId, targetDir)
+    eigengenes = write_eigengenes(blocks, data.colnames, runId, targetDir)
 
     algConverged = False if eigengenes.nrow > 1 else True # no modules detected
 
@@ -197,52 +184,50 @@ def processBlocks(data, blocks, runId, targetDir, verbose):
     if not passConverged:
         if verbose:
             warning("Evaluating Fit")
-        runConverged = rSnippets.pyWGCNA.evaluateFit(data, blocks, runId, targetDir)
+        runConverged = rs.wgcna.evaluateFit(data, blocks, runId, targetDir)
 
     return (runConverged, algConverged)
 
-def processRun(data, passId, runId,args):
-    # TODO -- revise for new convergence conditions
+def process_run(data, iteration, args):
+    '''
+    run wgcna
+    '''
 
-    targetDir= createDir(args.outputFilePath + "/pass" + str(passId) + "/run" + str(runId))
+    params = {}
+    if args.wgcnaParameters is not None:
+        params = args.wgcnaParameters
+    params['datExpr'] = data
+    params['saveTOMFileBase'] = iteration
+    warning(params)
+    blocks = wgcna.blockwiseModules(**params)
+    warning(blocks)
 
-    genes = data.rownames
-    samples = data.colnames
-
-    blocks = rSnippets.pyWGCNA.bWGCNA(data,
-                                      targetDir,
-                                      randomSeed = args.randomSeed,
-                                      minCoreKME = args.minCoreKME,
-                                      power = args.power,
-                                      minModuleSize = args.minModuleSize,
-                                      minCoreKMESize = args.minCoreKMESize,
-                                      maxBlockSize = args.maxBlockSize,
-                                      networkType = args.networkType,
-                                      TOMType = args.TOMType,
-                                      deepSplit = args.deepSplit,
-                                      verbose = args.verbose,
-                                      allowWGCNAThreads = args.allowWGCNAThreads)
-
-    key = "pass" + str(passId) + "_run" + str(runId)
-    saveRObject(blocks, 'blocks_' + key, targetDir, "blocks.RData")
-    return processBlocks(data, blocks, key, targetDir, args.verbose)
-
-def getExpressionSubset(expr, result, index, isClassified):
-    if results is None:
+def get_expression_subset(expr, result, index, isClassified):
+    if result is None:
         return expr
     elif isClassified:
-        return data[result[index] != 'UNCLASSIFIED', ]
+        return expr[result[index] != 'UNCLASSIFIED', ]
     else:
-        return data[result[index] == 'UNLASSIFIED',]
+        return expr[result[index] == 'UNLASSIFIED',]
 
 def iWGCNA(args):
     runId = 0
     passId = 0
-    iterationIndex = -1
     algConverged = False
 
-    exprData = readData(args.inputFile)
+    iterationIndex = -1
+    iteration = "initial" if passId == 0 else "residual_" + str(passId)
+    iteration = iteration + "_" + str(runId)
+
+    exprData = read_data(args.inputFile)
+    
+
+
     result = None
+
+    data = get_expression_subset(exprData, result, iterationIndex, False)
+    process_run(data, iteration, args)
+
 
     # pass convergence: nResiduals = 0
     # alg convergence: nFit = 0
@@ -250,34 +235,39 @@ def iWGCNA(args):
     # restructure: create 2-d matrix of genes by classification per run
 
 
-    while not algConverged:
-        passId = passId + 1
+    # while not algConverged:
+    #     passId = passId + 1
 
-        targetDir = args.outputFilePath + "/pass" + str(passId)
-        createDir(targetDir)
+    #     targetDir = args.outputFilePath + "/pass" + str(passId)
+    #     create_dir(targetDir)
 
-        data = getExpressionSubset(exprData, result, iterationIndex, False) # first pass -> return all data; otherwise get residuals
+    #     # first pass -> return all data; otherwise get residuals
+    #     data = get_expression_subset(exprData, result, iterationIndex, False)
 
-        passConverged = False
-        runId = 0
-        while not passConverged:
-            iterationIndex = iterationIndex + 1
+    #     passConverged = False
+    #     runId = 0
+    #     while not passConverged:
+    #         iterationIndex = iterationIndex + 1
 
-            runId = runId + 1
-            targetDir = targetDir + "/run" + str(runId)
-            createDir(targetDir)
-            key = "pass" + str(passId) + "_run" + str(runId)
+    #         runId = runId + 1
+    #         targetDir = targetDir + "/run" + str(runId)
+    #         create_dir(targetDir)
+    #         key = "pass" + str(passId) + "_run" + str(runId)
 
-            passConverged, algConverged = processRun(data, key, targetDir, args)
+    #         passConverged, algConverged = process_run(data, key, targetDir, args)
 
-            data = getExpressionSubset(exprData, result, iterationIndex, True) # set data to classified genes
+    #                     # set data to classified genes
+    #         data = get_expression_subset(exprData, result, iterationIndex, True)
 
 if __name__ == "__main__":
 
     try:
-        args = parseCommandLineArgs()
-        createDir(args.outputFilePath)
-        iWGCNA(args)
+        cml_args = parse_command_line_args()
+        create_dir(cml_args.outputFilePath)
+        initialize_workspace(cml_args.allowWGCNAThreads)
+
+   
+        iWGCNA(cml_args)
 
     finally:
         warning("iWGCNA: complete")

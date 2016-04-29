@@ -3,18 +3,22 @@
 uses rpy2 python library to create a namespace for R functions underlying iterativeWGCNA
 """
 
-from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
+util_functions = """
 
-rSnippetDefinitions = """
-
-suppressPackageStartupMessages(require(WGCNA))
-suppressPackageStartupMessages(require(igraph))
+# convert numeric data frame to real
+numeric2real <- function(df) {
+     df * 1.0
+}
 
 # wrapper for save object b/c doesn't seem to work with rpy2
 saveObject <- function(obj, objName, file) {
    assign(objName, obj)
    save(list=c(objName), file = file)
 }
+
+"""
+
+other="""
 
 # calculate an adjacency matrix (uses WGCNA adjacency function)
 # and outputs to a file
@@ -60,6 +64,7 @@ adj2edgeList <- function(adjMatrix, workingDirectory = getwd(), filename="fit-ne
 # depends on WGCNA
 bWGCNA <- function(data,
                    outputDir,
+                   iteration,
                    randomSeed = 12345,
                    minCoreKME = 0.80,
                    power = 6,
@@ -176,8 +181,6 @@ getDroppedGeneExpression <- function(dataFile, keptDataFile, targetDir) {
 }
 
 """
-
-pyWGCNA = SignatureTranslatedAnonymousPackage(rSnippetDefinitions, "pyWGCNA")
 
 
 __author__ = "Emily Greenfest-Allen"
