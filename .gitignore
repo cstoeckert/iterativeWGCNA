@@ -18,3 +18,5 @@ rSnippets.pyc
 *.bak
 
 *.pyc
+
+flycheck_iWGCNA.py

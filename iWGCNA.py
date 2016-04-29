@@ -108,11 +108,11 @@ def parse_command_line_args():
 
     parser.add_argument('-i', '--inputFile',
                         metavar='<gene expression file>',
-                        help="full path to input gene expression file",
+                        help="full path to input gene expression file; if full path is not provided, assumes in the working directory",
                         required=True)
 
-    parser.add_argument('-o', '--outputFilePath',
-                        help="target directory for output files",
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
                         metavar='<output dir>',
                         default=os.getcwd())
 
@@ -147,7 +147,7 @@ def initialize_r_workspace(args):
     '''
     if args.allowWGCNAThreads:
         wgcna.allowWGCNAThreads()
-    base.setwd(args.outputFilePath)
+    base.setwd(args.workingDir)
 
 # iWGCNA
 # ========================
@@ -249,7 +249,7 @@ def iWGCNA(args):
     # while not algConverged:
     #     passId = passId + 1
 
-    #     targetDir = args.outputFilePath + "/pass" + str(passId)
+    #     targetDir = args.workingDir + "/pass" + str(passId)
     #     create_dir(targetDir)
 
     #     # first pass -> return all data; otherwise get residuals
@@ -274,11 +274,11 @@ if __name__ == "__main__":
 
     try:
         cml_args = parse_command_line_args()
-        create_dir(cml_args.outputFilePath)
+        create_dir(cml_args.workingDir)
         initialize_r_workspace(cml_args)
 
         if cml_args.verbose:
-            warning("Working directory:", cml_args.outputFilePath)
+            warning("Working directory:", cml_args.workingDir)
             warning("Allowing WGCNA Threads?", "TRUE" if cml_args.allowWGCNAThreads else "FALSE")
             warning("Running WGCNA with the following parameters")
             warning(cml_args.wgcnaParameters)
