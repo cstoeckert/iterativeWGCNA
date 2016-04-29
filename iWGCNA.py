@@ -170,34 +170,29 @@ def write_eigengenes(blocks, samples, runId, outputDirPath):
     '''
     return rs.wgcna.processEigengenes(blocks, samples, runId, outputDirPath)
 
-def process_blocks(data, blocks, runId, targetDir, verbose):
+def process_blocks(data, blocks, iteration):
     '''
     evaluate blocks by extracting eigengenes,
     calculating eigengene similarities,
     and determining goodness of fit results
     '''
+    
+    eigengenes = utils.eigengene(iteration, blocks, data.colnames)
 
-    if verbose:
-        warning("Processing BlockwiseResult")
 
-    if verbose:
-        warning("Writing Eigengenes")
+    # algConverged = False if eigengenes.nrow > 1 else True # no modules detected
 
-    eigengenes = write_eigengenes(blocks, data.colnames, runId, targetDir)
+    # if verbose and passConverged:
+    #     warning("pass converged")
 
-    algConverged = False if eigengenes.nrow > 1 else True # no modules detected
+    # if not passConverged:
+    #     if verbose:
+    #         warning("Evaluating Fit")
+    #     runConverged = rs.wgcna.evaluateFit(data, blocks, runId, targetDir)
 
-    if verbose and passConverged:
-        warning("pass converged")
+    # return (runConverged, algConverged)
 
-    if not passConverged:
-        if verbose:
-            warning("Evaluating Fit")
-        runConverged = rs.wgcna.evaluateFit(data, blocks, runId, targetDir)
-
-    return (runConverged, algConverged)
-
-def process_run(data, iteration):
+def run_wgcna(data, iteration):
     '''
     run wgcna
     '''
@@ -210,8 +205,7 @@ def process_run(data, iteration):
     params['datExpr'] = base.t(data) # have to transpose before passing to WGCNA
     params['saveTOMFileBase'] = iteration + "-TOM"
 
-    blocks = wgcna.blockwiseModules(**params)
-    warning(blocks)
+    return wgcna.blockwiseModules(**params)
 
 def get_expression_subset(expr, result, index, isClassified):
     if result is None:
@@ -234,7 +228,8 @@ def iWGCNA():
 
     exprData = read_data(CML_ARGS.inputFile)
     data = get_expression_subset(exprData, result, iterationIndex, False)
-    process_run(data, iteration)
+
+    blocks = run_wgcna(data, iteration)
 
 
     # pass convergence: nResiduals = 0

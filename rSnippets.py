@@ -16,6 +16,22 @@ saveObject <- function(obj, objName, file) {
    save(list=c(objName), file = file)
 }
 
+# given WGCNA blocks, extracts and transposes eigengene matrix
+# labels columns (samples)
+# cleans up module names (removes the "ME")
+# exports and then returns
+eigengenes <- function(iteration, blocks, sampleNames) {
+    eigengenes <- t(blocks$MEs)
+
+    colnames(eigengenes) <- sampleNames
+    row.names(eigengenes) <- gsub("ME", paste(runId, "_", sep=""), row.names(eigengenes))
+
+    write.table(eigengenes, paste(iteration, '-eigengenes.txt', sep=""), quote=F)
+
+    eigengenes
+}
+
+
 """
 
 other="""
@@ -106,16 +122,7 @@ bWGCNA <- function(data,
 }
 
 # update eigengene names and output eigengene file
-processEigengenes <- function(blocks, sampleNames, runId, targetDir) {
-    eigengenes <- t(blocks$MEs)
 
-    colnames(eigengenes) <- sampleNames
-    row.names(eigengenes) <- gsub("ME", paste(runId, "_", sep=""), row.names(eigengenes))
-
-    write.table(eigengenes, paste(targetDir, 'eigengenes.txt', sep="/"), quote=F)
-
-    eigengenes
-}
 
 # process eigensimilarity for each gene, get revised membership
 # generate gene lists
