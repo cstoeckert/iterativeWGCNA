@@ -98,8 +98,8 @@ def helpEpilog():
 
 def parse_command_line_args():
     '''
-        parse command line args
-        '''
+    parse command line args
+    '''
 
     parser = argparse.ArgumentParser(prog="iWGCNA",
                                      description="perform interative WGCNA analysis",
@@ -141,13 +141,13 @@ def read_data(inputFile):
     exprData = ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names=1)
     return utils.numeric2real(exprData)
 
-def initialize_r_workspace(args):
+def initialize_r_workspace():
     '''
     initialize the r working environment
     '''
-    if args.allowWGCNAThreads:
+    if CML_ARGS.allowWGCNAThreads:
         wgcna.allowWGCNAThreads()
-    base.setwd(args.workingDir)
+    base.setwd(CML_ARGS.workingDir)
 
 # iWGCNA
 # ========================
@@ -197,18 +197,18 @@ def process_blocks(data, blocks, runId, targetDir, verbose):
 
     return (runConverged, algConverged)
 
-def process_run(data, iteration, args):
+def process_run(data, iteration):
     '''
     run wgcna
     '''
 
     # generate the parameters to the blockwiseModules call
     params = {}
-    if args.wgcnaParameters is not None:
-        params = args.wgcnaParameters
+    if CML_ARGS.wgcnaParameters is not None:
+        params = CML_ARGS.wgcnaParameters
 
     params['datExpr'] = base.t(data) # have to transpose before passing to WGCNA
-    params['saveTOMFileBase'] = iteration
+    params['saveTOMFileBase'] = iteration + "-TOM"
 
     blocks = wgcna.blockwiseModules(**params)
     warning(blocks)
@@ -221,23 +221,20 @@ def get_expression_subset(expr, result, index, isClassified):
     else:
         return expr[result[index] == 'UNLASSIFIED',]
 
-def iWGCNA(args):
+def iWGCNA():
     runId = 0
     passId = 0
     algConverged = False
 
     iterationIndex = -1
-    iteration = "initial" if passId == 0 else "residual_" + str(passId)
-    iteration = iteration + "_" + str(runId)
-
-    exprData = read_data(args.inputFile)
-
-
+    iteration = "primary_fit" if passId == 0 else "residual_fit-" + str(passId)
+    iteration = iteration + "_iteration-" + str(runId)
 
     result = None
 
+    exprData = read_data(CML_ARGS.inputFile)
     data = get_expression_subset(exprData, result, iterationIndex, False)
-    process_run(data, iteration, args)
+    process_run(data, iteration)
 
 
     # pass convergence: nResiduals = 0
@@ -273,17 +270,17 @@ def iWGCNA(args):
 if __name__ == "__main__":
 
     try:
-        cml_args = parse_command_line_args()
-        create_dir(cml_args.workingDir)
-        initialize_r_workspace(cml_args)
+        CML_ARGS = parse_command_line_args()
+        create_dir(CML_ARGS.workingDir)
+        initialize_r_workspace()
 
-        if cml_args.verbose:
-            warning("Working directory:", cml_args.workingDir)
-            warning("Allowing WGCNA Threads?", "TRUE" if cml_args.allowWGCNAThreads else "FALSE")
+        if CML_ARGS.verbose:
+            warning("Working directory:", CML_ARGS.workingDir)
+            warning("Allowing WGCNA Threads?", "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
             warning("Running WGCNA with the following parameters")
-            warning(cml_args.wgcnaParameters)
+            warning(CML_ARGS.wgcnaParameters)
 
-        iWGCNA(cml_args)
+        iWGCNA()
 
     finally:
         warning("iWGCNA: complete")
