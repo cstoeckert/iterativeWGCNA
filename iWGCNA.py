@@ -13,6 +13,7 @@ R dependencies:
 from __future__ import print_function
 from __future__ import with_statement
 
+from collections import OrderedDict
 import argparse
 import os
 import sys
@@ -26,6 +27,7 @@ import rSnippets as rs
 wgcna = importr('WGCNA')
 igraph = importr('igraph')
 base = importr('base')
+stats = importr('stats')
 utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
 
 
@@ -108,7 +110,9 @@ def parse_command_line_args():
 
     parser.add_argument('-i', '--inputFile',
                         metavar='<gene expression file>',
-                        help="full path to input gene expression file; if full path is not provided, assumes in the working directory",
+                        help="full path to input gene expression file; " +
+                        "if full path is not provided, " +
+                        "assumes the file is in the working directory",
                         required=True)
 
     parser.add_argument('-o', '--workingDir',
@@ -130,15 +134,24 @@ def parse_command_line_args():
     parser.add_argument('--allowWGCNAThreads',
                         action="store_true")
 
+    parser.add_argument('--saveBlocks',
+                        help="save WGNCA blockwise modules for each iteration",
+                        action="store_true")
+
+    parser.add_argument('--saveFinalEigengenesOnly',
+                        help="only save final eigengenes; if not specified will " +
+                        "save eigengenes for each iteration",
+                        action="store_true")
+
 
     return parser.parse_args()
 
-def read_data(inputFile):
+def read_data():
     '''
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
-    exprData = ro.DataFrame.from_csvfile(inputFile, sep='\t', header=True, row_names=1)
+    exprData = ro.DataFrame.from_csvfile(CML_ARGS.inputFile, sep='\t', header=True, row_names=1)
     return utils.numeric2real(exprData)
 
 def initialize_r_workspace():
@@ -149,26 +162,12 @@ def initialize_r_workspace():
         wgcna.allowWGCNAThreads()
     base.setwd(CML_ARGS.workingDir)
 
+def calculate_kme(data, eigengene):
+    correlation = base.as_data_frame(stats.cor(base.t(data), base.t(eigengene)))
+    return correlation
+
 # iWGCNA
 # ========================
-
-def save_r_object(data, objName, path, fileName):
-    '''
-    (rename) and save an R object to the specified file path as an .RData file
-    :param data: the R object
-    :param objName: the name of the object in the save
-    :param path: full path to the file
-    :param fileName: name of the save
-    '''
-
-    fileName = path + '/' + fileName
-    rs.wgcna.saveObject(data, objName, fileName)
-
-def write_eigengenes(blocks, samples, runId, outputDirPath):
-    '''
-    write eigengenes to file
-    '''
-    return rs.wgcna.processEigengenes(blocks, samples, runId, outputDirPath)
 
 def process_blocks(data, blocks, iteration):
     '''
@@ -176,9 +175,8 @@ def process_blocks(data, blocks, iteration):
     calculating eigengene similarities,
     and determining goodness of fit results
     '''
-    
-    eigengenes = utils.eigengene(iteration, blocks, data.colnames)
 
+    eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
 
     # algConverged = False if eigengenes.nrow > 1 else True # no modules detected
 
@@ -207,7 +205,79 @@ def run_wgcna(data, iteration):
 
     return wgcna.blockwiseModules(**params)
 
+def initialize_membership():
+    '''
+    initialize membership dictionary
+    gene list comes from input data row names (DATA.rownames)
+    all genes are initially unclassified
+    an ordered dictionary is used to keep values in same order
+    as input data
+    '''
+
+    membership = OrderedDict((gene, "UNCLASSIFIED") for gene in DATA.rownames)
+    return membership
+
+def update_membership(iteration, data, blocks, membership):
+    '''
+    compares new module membership assignments to
+    prexisting ones; updates membership list
+    '''
+    if membership is None:
+        membership = initialize_membership()
+
+    modules = utils.modules(blocks, data.rownames)
+
+    # if the gene is in the subset
+    # update, otherwise leave as is
+    for gene in data.rownames:
+        # .rx returns a FloatVector which introduces
+        # a .0 to the numeric labels when converted to string
+        # which needs to be removed
+        # note: R array starts at index 1, python at 0
+        module = str(modules.rx(gene, 1)[0]).replace(".0", "")
+        if module in ("0", "grey"):
+            module = "UNCLASSIFIED"
+        else:
+            module = iteration + "-" + module
+
+        membership[gene] = module
+
+    return membership
+
+def write_row(row, fileName, rowLabel):
+    '''
+write row to file; creates new file
+if none exists, otherwise appends new eigengenes
+to existing file
+'''
+    try:
+        os.stat(fileName)
+    except OSError:
+        header = (rowLabel,) + tuple(row.colnames)
+        with open(fileName, 'w') as f:
+            print("\t".join(header), file=f)
+    finally:
+        row.to_csvfile(fileName, quote=False, sep="\t", col_names=False, append=True)
+
+def write_membership(iteration, membership):
+    '''
+    writes the membership dictionary to file
+    '''
+
+    df = ro.DataFrame(membership)
+    df.rownames = (iteration)
+    write_row(df, "membership.txt", "Iteration")
+
+def write_eigengenes(ematrix):
+    write_row(ematrix, "eigengenes.txt", "Module")
+
+
 def get_expression_subset(expr, result, index, isClassified):
+    '''
+    subsets expression data
+    returning either the classified or unclassified
+    subset depending on the isClassified flag
+    '''
     if result is None:
         return expr
     elif isClassified:
@@ -221,16 +291,31 @@ def iWGCNA():
     algConverged = False
 
     iterationIndex = -1
-    iteration = "primary_fit" if passId == 0 else "residual_fit-" + str(passId)
-    iteration = iteration + "_iteration-" + str(runId)
+    iteration = "p" if passId == 0 else "r-" + str(passId)
+    iteration = iteration + "_iter_" + str(runId)
 
-    result = None
+    membership = None
 
-    exprData = read_data(CML_ARGS.inputFile)
-    data = get_expression_subset(exprData, result, iterationIndex, False)
+    data = get_expression_subset(DATA, membership, iterationIndex, False)
 
     blocks = run_wgcna(data, iteration)
+    if CML_ARGS.saveBlocks:
+        utils.saveObject(blocks, "blocks", iteration + "-blocks.RData")
 
+    eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
+    write_eigengenes(eigengenes)
+
+    # eigengene connectivity (kME) calculation
+    for module in eigengenes.rownames:
+        eg = eigengenes.rx(module, True)
+        kME = calculate_kme(data, eg)
+        # warning(kME)
+
+    membership = update_membership(iteration, data, blocks, membership)
+    write_membership(iteration, membership)
+
+    # assemble iteration results
+    # membership = update_membership(iteration, data, blocks, None)
 
     # pass convergence: nResiduals = 0
     # alg convergence: nFit = 0
@@ -274,6 +359,8 @@ if __name__ == "__main__":
             warning("Allowing WGCNA Threads?", "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
             warning("Running WGCNA with the following parameters")
             warning(CML_ARGS.wgcnaParameters)
+
+        DATA = read_data()
 
         iWGCNA()
 

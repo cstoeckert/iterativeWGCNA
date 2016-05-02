@@ -20,3 +20,5 @@ rSnippets.pyc
 *.pyc
 
 flycheck_iWGCNA.py
+
+.Rhistory

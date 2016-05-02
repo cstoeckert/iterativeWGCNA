@@ -19,16 +19,20 @@ saveObject <- function(obj, objName, file) {
 # given WGCNA blocks, extracts and transposes eigengene matrix
 # labels columns (samples)
 # cleans up module names (removes the "ME")
-# exports and then returns
+
 eigengenes <- function(iteration, blocks, sampleNames) {
-    eigengenes <- t(blocks$MEs)
-
+    eigengenes <- as.data.frame(t(blocks$MEs))
     colnames(eigengenes) <- sampleNames
-    row.names(eigengenes) <- gsub("ME", paste(runId, "_", sep=""), row.names(eigengenes))
-
-    write.table(eigengenes, paste(iteration, '-eigengenes.txt', sep=""), quote=F)
-
+    eigengenes <- eigengenes[row.names(eigengenes) != "ME0" & row.names(eigengenes) != "MEgrey", ]
+    row.names(eigengenes) <- gsub("ME", paste(iteration, "_", sep=""), row.names(eigengenes))
+    
     eigengenes
+}
+
+# given WGCNA blocks and gene names, returns
+# a data frame with modules mapped to gene names
+modules <- function(blocks, geneNames) {
+    as.data.frame(blocks$colors, row.names = geneNames)
 }
 
 
