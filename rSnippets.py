@@ -24,8 +24,8 @@ eigengenes <- function(iteration, blocks, sampleNames) {
     eigengenes <- as.data.frame(t(blocks$MEs))
     colnames(eigengenes) <- sampleNames
     eigengenes <- eigengenes[row.names(eigengenes) != "ME0" & row.names(eigengenes) != "MEgrey", ]
-    row.names(eigengenes) <- gsub("ME", paste(iteration, "_", sep=""), row.names(eigengenes))
-    
+    row.names(eigengenes) <- gsub("ME", paste(iteration, "-", sep=""), row.names(eigengenes))
+
     eigengenes
 }
 
@@ -35,95 +35,17 @@ modules <- function(blocks, geneNames) {
     as.data.frame(blocks$colors, row.names = geneNames)
 }
 
+# extract module members
+# does not assume same ordering
+extractMembers <- function(module, expr, membership) {
+    members = t(membership)[, 1] == module
+    expr[members, ]
+}
+
 
 """
 
-other="""
-
-# calculate an adjacency matrix (uses WGCNA adjacency function)
-# and outputs to a file
-# depends on WGCNA
-calcAdjacencyMatrix <- function(data,
-                                 power = 6,
-                                 workingDirectory = getwd(),
-                                 writeMatrix = FALSE,
-                                 filename="fit-adjacency-matrix.txt",
-                                 verbose = TRUE
-                                 ) {
-    if (verbose) {
-        print("Calculating Signed Adjacency Matrix for Retained Gene Set (Good Fit)")
-    }
-
-    adjacencyMatrix <- adjacency(t(data), power = power, type="signed")
-
-    if (writeMatrix) {
-        filename = paste(workingDirectory, filename, sep="/")
-        write.table(adjacencyMatrix, filename, sep="\t", quote=FALSE)
-    }
-    adjacencyMatrix
-}
-
-# generates an edge list from an adjacency matrix and
-# outputs to file
-# depends on igraph write.graph
-
-adj2edgeList <- function(adjMatrix, workingDirectory = getwd(), filename="fit-network-edge-list.txt", verbose=TRUE) {
-    if (verbose)
-        print("Generating and Exporting Network From Fit Genes")
-
-    g <- graph.adjacency(adjMatrix, mode="undirected", weighted = TRUE)
-
-    filename = paste(workingDirectory, filename, sep="/")
-    write.graph(g, filename, format="ncol")
-
-    g
-}
-
-# run the blockwiseWGCNA
-# see WGCNA manual for parameter details
-# depends on WGCNA
-bWGCNA <- function(data,
-                   outputDir,
-                   iteration,
-                   randomSeed = 12345,
-                   minCoreKME = 0.80,
-                   power = 6,
-                   minModuleSize = 20,
-                   minCoreKMESize = 15,
-                   maxBlockSize = 5000,
-                   networkType = signed,
-                   TOMType = signed,
-                   deepSplit = 0,
-                   allowWGCNAThreads = TRUE,
-                   verbose = TRUE) {
-
-    if (verbose)
-        wgcnaVerbose = 10
-    else
-        wgcnaVerbose = 0
-
-    if (allowWGCNAThreads)
-        allowWGCNAThreads()
-
-    filename = paste(outputDir, 'blockwiseWGCNA-output.pdf', sep='/')
-    pdf(filename)
-    # run blockwiseWGCNA
-    # data * 1.0 to convert to real (handle the following bug: https://support.bioconductor.org/p/76829/)
-
-    blocks <- blockwiseModules(t(data) * 1.0,
-                               randomSeed = randomSeed,
-                               power = power,
-                               networkType = networkType,
-                               minModuleSize = minModuleSize,
-                               TOMType = TOMType,
-                               minCoreKME = minCoreKME,
-                               minCoreKMESize = minCoreKMESize,
-                               minKMEtoStay = minCoreKME - 0.05,
-                               deepSplit = deepSplit,
-                               verbose = wgcnaVerbose)
-    dev.off()
-    blocks
-}
+other = """
 
 # update eigengene names and output eigengene file
 
@@ -182,13 +104,6 @@ evaluateFit <- function(data, blocks, runId, targetDir) {
     }
 
     returnval
-}
-
-getDroppedGeneExpression <- function(dataFile, keptDataFile, targetDir) {
-    all <- read.table(dataFile, row.names = 1, header=T, sep="\t")
-    kept = read.table(keptDataFile, row.names=1, header=T, sep="\t")
-    dropped <- all[setdiff(row.names(all), row.names(kept)), ]
-    write.table(dropped, paste(targetDir, "pass-initial-gene-expression.txt", sep="/"), quote=F)
 }
 
 """

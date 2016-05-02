@@ -30,17 +30,57 @@ base = importr('base')
 stats = importr('stats')
 utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
 
-
-# Parameter Types
 # ========================
-def restricted_float(value):
+# Utilities
+# ========================
+
+def warning(prefix, *objs):
     '''
-        for argument parsing; restricts float value from 0 to 1
+    wrapper for writing to stderr
     '''
-    value = float(value)
-    if value < 0.0 or value > 1.0:
-        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(value,))
-    return value
+    print(prefix, *objs, file=sys.stderr)
+
+# ========================
+# I/O and File Management
+# ========================
+
+def create_dir(dirName):
+    '''
+    check if directory exists in the path, if not create
+    '''
+    try:
+        os.stat(dirName)
+    except OSError:
+        os.mkdir(dirName)
+
+    return dirName
+
+def write_data_frame(df, fileName, rowLabel):
+    '''
+    write data frame to file; creates new file
+    if none exists, otherwise appends new eigengenes
+    to existing file
+    '''
+    try:
+        os.stat(fileName)
+    except OSError:
+        header = (rowLabel,) + tuple(df.colnames)
+        with open(fileName, 'w') as f:
+            print("\t".join(header), file=f)
+    finally:
+        df.to_csvfile(fileName, quote=False, sep="\t", col_names=False, append=True)
+
+def read_data():
+    '''
+    read gene expression data into a data frame
+    and convert numeric (integer) data to real
+    '''
+    exprData = ro.DataFrame.from_csvfile(CML_ARGS.inputFile, sep='\t', header=True, row_names=1)
+    return utils.numeric2real(exprData)
+
+# ========================
+# Help & Command Line Args
+# ========================
 
 def parameter_list(strValue):
     '''
@@ -67,26 +107,6 @@ def parameter_list(strValue):
         params["numericLabels"] = True
 
     return params
-
-# Utilities
-# ========================
-def warning(prefix, *objs):
-    '''
-    wrapper for writing to stderr
-    '''
-    print(prefix, *objs, file=sys.stderr)
-
-def create_dir(dirName):
-    '''
-    check if directory exists in the path, if not create
-    '''
-    try:
-        os.stat(dirName)
-    except OSError:
-        os.mkdir(dirName)
-
-    return dirName
-
 
 def helpEpilog():
     '''
@@ -146,13 +166,9 @@ def parse_command_line_args():
 
     return parser.parse_args()
 
-def read_data():
-    '''
-    read gene expression data into a data frame
-    and convert numeric (integer) data to real
-    '''
-    exprData = ro.DataFrame.from_csvfile(CML_ARGS.inputFile, sep='\t', header=True, row_names=1)
-    return utils.numeric2real(exprData)
+# ========================
+# R Session Management
+# ========================
 
 def initialize_r_workspace():
     '''
@@ -162,33 +178,17 @@ def initialize_r_workspace():
         wgcna.allowWGCNAThreads()
     base.setwd(CML_ARGS.workingDir)
 
-def calculate_kme(data, eigengene):
-    correlation = base.as_data_frame(stats.cor(base.t(data), base.t(eigengene)))
-    return correlation
-
-# iWGCNA
+# ========================
+# iWGNA Functions
 # ========================
 
-def process_blocks(data, blocks, iteration):
+def calculate_kme(expr, eigengene):
     '''
-    evaluate blocks by extracting eigengenes,
-    calculating eigengene similarities,
-    and determining goodness of fit results
+    calculates eigengene connectivity kme
+    between an eigengene and expression data set
     '''
-
-    eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
-
-    # algConverged = False if eigengenes.nrow > 1 else True # no modules detected
-
-    # if verbose and passConverged:
-    #     warning("pass converged")
-
-    # if not passConverged:
-    #     if verbose:
-    #         warning("Evaluating Fit")
-    #     runConverged = rs.wgcna.evaluateFit(data, blocks, runId, targetDir)
-
-    # return (runConverged, algConverged)
+    correlation = base.as_data_frame(stats.cor(base.t(expr), base.t(eigengene)))
+    return correlation
 
 def run_wgcna(data, iteration):
     '''
@@ -244,59 +244,45 @@ def update_membership(iteration, data, blocks, membership):
 
     return membership
 
-def write_row(row, fileName, rowLabel):
-    '''
-write row to file; creates new file
-if none exists, otherwise appends new eigengenes
-to existing file
-'''
-    try:
-        os.stat(fileName)
-    except OSError:
-        header = (rowLabel,) + tuple(row.colnames)
-        with open(fileName, 'w') as f:
-            print("\t".join(header), file=f)
-    finally:
-        row.to_csvfile(fileName, quote=False, sep="\t", col_names=False, append=True)
-
 def write_membership(iteration, membership):
     '''
     writes the membership dictionary to file
     '''
-
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
-    write_row(df, "membership.txt", "Iteration")
+    write_data_frame(df, "membership.txt", "Iteration")
 
 def write_eigengenes(ematrix):
-    write_row(ematrix, "eigengenes.txt", "Module")
+    write_data_frame(ematrix, "eigengenes.txt", "Module")
 
-
-def get_expression_subset(expr, result, index, isClassified):
+def get_member_expression(module, expr, membership):
     '''
     subsets expression data
-    returning either the classified or unclassified
-    subset depending on the isClassified flag
+    returning expression for only members of the specified module
     '''
-    if result is None:
-        return expr
-    elif isClassified:
-        return expr[result[index] != 'UNCLASSIFIED', ]
-    else:
-        return expr[result[index] == 'UNLASSIFIED',]
+    return utils.extractMembers(module, expr, ro.DataFrame(membership))
+
+def set_iteration_label(runId, passId):
+	label = "p" if passId == 0 else "r-" + str(passId)
+	label = label + "_iter_" + str(runId)
+	return label
+
+# ========================
+# iWGCNA Main
+# ========================
 
 def iWGCNA():
+    # initialize iteration counters and iteration labels
     runId = 0
     passId = 0
+    iteration = set_iteration_label(runId, passId)
+
+    membership = None
     algConverged = False
 
     iterationIndex = -1
-    iteration = "p" if passId == 0 else "r-" + str(passId)
-    iteration = iteration + "_iter_" + str(runId)
-
-    membership = None
-
-    data = get_expression_subset(DATA, membership, iterationIndex, False)
+    data = utils.numeric2real(DATA) #get_expression_subset(DATA, membership, iterationIndex, False)
+    warning(data.nrow)
 
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
@@ -305,17 +291,23 @@ def iWGCNA():
     eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
     write_eigengenes(eigengenes)
 
-    # eigengene connectivity (kME) calculation
-    for module in eigengenes.rownames:
-        eg = eigengenes.rx(module, True)
-        kME = calculate_kme(data, eg)
-        # warning(kME)
-
     membership = update_membership(iteration, data, blocks, membership)
     write_membership(iteration, membership)
 
-    # assemble iteration results
-    # membership = update_membership(iteration, data, blocks, None)
+    # eigengene connectivity (kME) calculation
+    for module in eigengenes.rownames:
+        eg = eigengenes.rx(module, True)
+        warning(module)
+        moduleMembers = get_member_expression(module, data, membership)
+        # warning(membership)
+        warning(moduleMembers.nrow)
+        warning(moduleMembers)
+        # kME = calculate_kme(data, eg)
+        # warning(kME)
+
+
+
+
 
     # pass convergence: nResiduals = 0
     # alg convergence: nFit = 0
