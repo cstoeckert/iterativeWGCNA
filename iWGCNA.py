@@ -328,13 +328,30 @@ def set_iteration_label(runId, passId):
     label = label + "_iter_" + str(runId)
     return label
 
+def remove_small_modules(memberCount, membership, genes):
+    ''' 
+    checks membership counts and removes
+    any modules that are too small
+    by updating gene membership to UNCLASSIFIED
+    returns updated membership and count of total number of modules
+    '''
+    modules = {}
+    for g in genes:
+        module = membership[g]
+        if memberCount[module] < CML_ARGS.wgcnaParameters["minModuleSize"]:
+            membership[g] = "UNCLASSIFIED"
+        else:
+            modules[module] = 1
+    return membership, len(modules)
+
 def evaluate_fit(kME, membership, genes):
-    ''' evaluate eigengene similarity (KME) as
+    '''
+    evaluate eigengene similarity (KME) as
     a measure of goodness of fit
     label poorly fitting genes as unclassified
     then remove any modules whose n < minMoudleSize
+    returns updated membership and number of modules
     '''
-
     memberCount = {}
     for g in genes:
         module = membership[g]
@@ -347,27 +364,15 @@ def evaluate_fit(kME, membership, genes):
             membership[g] = "UNCLASSIFIED"
             memberCount[module] = memberCount[module] - 1
 
-    membership = remove_small_modules(memberCount, membership, genes)
-    return membership
+    membership, moduleCount = remove_small_modules(memberCount, membership, genes)
+    return membership, moduleCount
 
-# ========================
-# iWGCNA Main
-# ========================
-
-def iWGCNA():
-    # initialize iteration counters and iteration labels
-    runId = 0
-    passId = 0
-    iteration = set_iteration_label(runId, passId)
+def run_iteration(iteration, data, membership, kME):
+    '''
+    run iteration of blockwise WGCNA
+    return membership and eigengenes
+    '''
     
-    kME = None
-    membership = None
-    algConverged = False
-
-    iterationIndex = -1
-    data = utils.numeric2real(DATA) #get_expression_subset(DATA, membership, iterationIndex, False)
-    warning(data.nrow)
-
     # run blockwise WGCNA
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
@@ -388,12 +393,30 @@ def iWGCNA():
 
     # evaluate fit & update membership again
     # output pruned membership
-    membership = evaluate_fit(kME, membership, data.rownames, iteration)
+    membership = evaluate_fit(kME, membership, data.rownames)
     write_membership(iteration, membership, True)
 
+    return membership, kME
 
+# ========================
+# iWGCNA Main
+# ========================
 
+def iWGCNA():
+    # initialize iteration counters and iteration labels
+    runId = 0
+    passId = 0
+    iteration = set_iteration_label(runId, passId)
+    
+    kME = None
+    membership = None
+    algConverged = False
 
+    iterationIndex = -1
+    data = utils.numeric2real(DATA) #get_expression_subset(DATA, membership, iterationIndex, False)
+
+    # while not algConverged:
+    membership, kME = run_iteration(iteration, data, membership, kME)
 
     # pass convergence: nResiduals = 0
     # alg convergence: nFit = 0
