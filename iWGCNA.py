@@ -101,11 +101,6 @@ def parameter_list(strValue):
 
         params[name] = value
 
-    # if a preference for module labels is not provided
-    # by the user, set WGCNA to return numeric labels
-    if "numericLabels" not in params:
-        params["numericLabels"] = True
-
     return params
 
 def helpEpilog():
@@ -163,8 +158,28 @@ def parse_command_line_args():
                         "save eigengenes for each iteration",
                         action="store_true")
 
+    args = parser.parse_args()
+    args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
 
-    return parser.parse_args()
+    return args
+
+def set_wgcna_parameter_defaults(params):
+    '''
+    set default values for WGCNA blockwiseModules
+    numericLabels = TRUE
+    minKMEtoStay = 0.8
+    '''
+
+    if "numericLabels" not in params:
+        params["numericLabels"] = True
+    if "minKMEtoStay" not in params:
+        params["minKMEtoStay"] = 0.8
+    if "minCoreKME" not in params:
+        params["minCoreKME"] = 0.8
+    if "minModuleSize" not in params:
+        params["minModuleSize"] = 20
+
+    return params
 
 # ========================
 # R Session Management
@@ -205,6 +220,48 @@ def run_wgcna(data, iteration):
 
     return wgcna.blockwiseModules(**params)
 
+def initialize_kme():
+    '''
+    initialized eigengene connectivity (kME)
+    dictionary
+    gene list comes from input data row names (DATA.rownames)
+    all kMEs are initially NaN
+    an ordered dictionary is used to keep values in the same
+    order as input data
+    '''
+    kME = OrderedDict((gene, float('NaN')) for gene in DATA.rownames)
+    return kME
+
+def update_kme(kME, data, membership, eigengenes):
+    '''
+    finds new module membership and updates eigengene
+    connectivity (kME)
+    for each module, extracts the member subset from the
+    expression data and calculates the kME between the module
+    eigengene and each member
+    '''
+
+    if kME is None:
+        kME = initialize_kme()
+
+    for module in eigengenes.rownames:
+        moduleEigengene = eigengenes.rx(module, True)
+        moduleMembers = get_member_expression(module, data, membership)
+        memberKME = calculate_kme(moduleMembers, moduleEigengene)
+        for gene in memberKME.rownames:
+            kME[gene] = memberKME.rx(gene, 1)[0]
+
+    return kME
+
+def write_kme(iteration, kME):
+    '''
+    writes the eigengene connectivity (kME)
+    dictionary to file
+    '''
+    df = ro.DataFrame(kME)
+    df.rownames = (iteration)
+    write_data_frame(df, "eigengene-connectivity.txt", "Iteration")
+
 def initialize_membership():
     '''
     initialize membership dictionary
@@ -217,7 +274,7 @@ def initialize_membership():
     membership = OrderedDict((gene, "UNCLASSIFIED") for gene in DATA.rownames)
     return membership
 
-def update_membership(iteration, data, blocks, membership):
+def update_membership(iteration, genes, blocks, membership):
     '''
     compares new module membership assignments to
     prexisting ones; updates membership list
@@ -225,32 +282,36 @@ def update_membership(iteration, data, blocks, membership):
     if membership is None:
         membership = initialize_membership()
 
-    modules = utils.modules(blocks, data.rownames)
+    modules = utils.modules(blocks, genes)
 
     # if the gene is in the subset
     # update, otherwise leave as is
-    for gene in data.rownames:
+    for g in genes:
         # .rx returns a FloatVector which introduces
         # a .0 to the numeric labels when converted to string
         # which needs to be removed
         # note: R array starts at index 1, python at 0
-        module = str(modules.rx(gene, 1)[0]).replace(".0", "")
+        module = str(modules.rx(g, 1)[0]).replace(".0", "")
         if module in ("0", "grey"):
             module = "UNCLASSIFIED"
         else:
             module = iteration + "-" + module
 
-        membership[gene] = module
+        membership[g] = module
 
     return membership
 
-def write_membership(iteration, membership):
+def write_membership(iteration, membership, isPruned):
     '''
     writes the membership dictionary to file
+    :param iteration    iWGCNA iteratoin
+    :param membership   gene->module mapping
+    :param initialClassificaton    boolean flag indicating whether pruning has been done
     '''
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
-    write_data_frame(df, "membership.txt", "Iteration")
+    fileName = "pruned-membership.txt" if isPruned else "membership.txt"
+    write_data_frame(df, fileName, "Iteration")
 
 def write_eigengenes(ematrix):
     write_data_frame(ematrix, "eigengenes.txt", "Module")
@@ -263,9 +324,31 @@ def get_member_expression(module, expr, membership):
     return utils.extractMembers(module, expr, ro.DataFrame(membership))
 
 def set_iteration_label(runId, passId):
-	label = "p" if passId == 0 else "r-" + str(passId)
-	label = label + "_iter_" + str(runId)
-	return label
+    label = "p" if passId == 0 else "r-" + str(passId)
+    label = label + "_iter_" + str(runId)
+    return label
+
+def evaluate_fit(kME, membership, genes):
+    ''' evaluate eigengene similarity (KME) as
+    a measure of goodness of fit
+    label poorly fitting genes as unclassified
+    then remove any modules whose n < minMoudleSize
+    '''
+
+    memberCount = {}
+    for g in genes:
+        module = membership[g]
+        if module in memberCount:
+            memberCount[module] = memberCount[module] + 1
+        else:
+            memberCount[module] = 1
+
+        if kME[g] < CML_ARGS.wgcnaParameters["minKMEtoStay"]:
+            membership[g] = "UNCLASSIFIED"
+            memberCount[module] = memberCount[module] - 1
+
+    membership = remove_small_modules(memberCount, membership, genes)
+    return membership
 
 # ========================
 # iWGCNA Main
@@ -276,7 +359,8 @@ def iWGCNA():
     runId = 0
     passId = 0
     iteration = set_iteration_label(runId, passId)
-
+    
+    kME = None
     membership = None
     algConverged = False
 
@@ -284,26 +368,28 @@ def iWGCNA():
     data = utils.numeric2real(DATA) #get_expression_subset(DATA, membership, iterationIndex, False)
     warning(data.nrow)
 
+    # run blockwise WGCNA
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
         utils.saveObject(blocks, "blocks", iteration + "-blocks.RData")
 
+    # extract eigengenes from blocks
     eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
     write_eigengenes(eigengenes)
 
-    membership = update_membership(iteration, data, blocks, membership)
-    write_membership(iteration, membership)
+    # extract module membership from blocks and update
+    membership = update_membership(iteration, data.rownames, blocks, membership)
+    write_membership(iteration, membership, False)
 
-    # eigengene connectivity (kME) calculation
-    for module in eigengenes.rownames:
-        eg = eigengenes.rx(module, True)
-        warning(module)
-        moduleMembers = get_member_expression(module, data, membership)
-        # warning(membership)
-        warning(moduleMembers.nrow)
-        warning(moduleMembers)
-        # kME = calculate_kme(data, eg)
-        # warning(kME)
+    # calculate eigengene connectivity (kME) to
+    # assigned module
+    kME = update_kme(kME, data, membership, eigengenes)
+    write_kme(iteration, kME)
+
+    # evaluate fit & update membership again
+    # output pruned membership
+    membership = evaluate_fit(kME, membership, data.rownames, iteration)
+    write_membership(iteration, membership, True)
 
 
 
