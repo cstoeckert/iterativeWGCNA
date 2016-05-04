@@ -41,6 +41,11 @@ extractMembers <- function(module, expr, membership) {
     expr[members, ]
 }
 
+# remove unclassified from expression set
+removeUnclassified <- function(expr, membership) {
+    classified = t(membership)[,1] != "UNCLASSIFIED"
+    expr[classified, ]
+}
 
 """
 

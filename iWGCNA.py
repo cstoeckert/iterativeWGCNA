@@ -21,15 +21,6 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr, SignatureTranslatedAnonymousPackage
 import rSnippets as rs
 
-# R Package Imports
-# ========================
-
-wgcna = importr('WGCNA')
-igraph = importr('igraph')
-base = importr('base')
-stats = importr('stats')
-utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
-
 # ========================
 # Utilities
 # ========================
@@ -70,13 +61,13 @@ def write_data_frame(df, fileName, rowLabel):
     finally:
         df.to_csvfile(fileName, quote=False, sep="\t", col_names=False, append=True)
 
-def read_data():
+def read_data(fileName):
     '''
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
-    exprData = ro.DataFrame.from_csvfile(CML_ARGS.inputFile, sep='\t', header=True, row_names=1)
-    return utils.numeric2real(exprData)
+    data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
+    return utils.numeric2real(data)
 
 # ========================
 # Help & Command Line Args
@@ -153,11 +144,6 @@ def parse_command_line_args():
                         help="save WGNCA blockwise modules for each iteration",
                         action="store_true")
 
-    parser.add_argument('--saveFinalEigengenesOnly',
-                        help="only save final eigengenes; if not specified will " +
-                        "save eigengenes for each iteration",
-                        action="store_true")
-
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
 
@@ -170,6 +156,9 @@ def set_wgcna_parameter_defaults(params):
     minKMEtoStay = 0.8
     '''
 
+    if params is None:
+        params = {}
+
     if "numericLabels" not in params:
         params["numericLabels"] = True
     if "minKMEtoStay" not in params:
@@ -178,6 +167,8 @@ def set_wgcna_parameter_defaults(params):
         params["minCoreKME"] = 0.8
     if "minModuleSize" not in params:
         params["minModuleSize"] = 20
+    if "reassignThreshold" not in params:
+        params["reassignThreshold"] = 0.05 # 0.0000001 # 1e-6
 
     return params
 
@@ -310,7 +301,11 @@ def write_membership(iteration, membership, isPruned):
     '''
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
-    fileName = "pruned-membership.txt" if isPruned else "membership.txt"
+    fileName = "revised-membership.txt" if isPruned else "initial-membership.txt"
+    
+    if iteration == "final":
+        fileName = "final-membership.txt"
+
     write_data_frame(df, fileName, "Iteration")
 
 def write_eigengenes(ematrix):
@@ -323,26 +318,43 @@ def get_member_expression(module, expr, membership):
     '''
     return utils.extractMembers(module, expr, ro.DataFrame(membership))
 
+def get_residuals(expr, membership):
+    '''
+    subsets expression data
+    returning expression for only residuals to the fit
+    '''
+    return get_member_expression("UNCLASSIFIED", expr, membership)
+
+def remove_residuals(expr, membership):
+    ''' 
+    subsets expression data
+    removing residuals to the fit
+    '''
+    return utils.removeUnclassified(expr, ro.DataFrame(membership))
+
 def set_iteration_label(runId, passId):
     label = "p" if passId == 0 else "r-" + str(passId)
     label = label + "_iter_" + str(runId)
     return label
 
 def remove_small_modules(memberCount, membership, genes):
-    ''' 
+    '''
     checks membership counts and removes
     any modules that are too small
     by updating gene membership to UNCLASSIFIED
     returns updated membership and count of total number of modules
+    as well as count of total classified genes
     '''
     modules = {}
+    classifiedGeneCount = 0
     for g in genes:
         module = membership[g]
         if memberCount[module] < CML_ARGS.wgcnaParameters["minModuleSize"]:
             membership[g] = "UNCLASSIFIED"
         else:
+            classifiedGeneCount = classifiedGeneCount + 1
             modules[module] = 1
-    return membership, len(modules)
+    return membership, len(modules), classifiedGeneCount
 
 def evaluate_fit(kME, membership, genes):
     '''
@@ -351,6 +363,8 @@ def evaluate_fit(kME, membership, genes):
     label poorly fitting genes as unclassified
     then remove any modules whose n < minMoudleSize
     returns updated membership and number of modules
+    and classified gene count (to test convergence
+    conditions)
     '''
     memberCount = {}
     for g in genes:
@@ -364,15 +378,15 @@ def evaluate_fit(kME, membership, genes):
             membership[g] = "UNCLASSIFIED"
             memberCount[module] = memberCount[module] - 1
 
-    membership, moduleCount = remove_small_modules(memberCount, membership, genes)
-    return membership, moduleCount
+    membership, moduleCount, classifiedGeneCount = remove_small_modules(memberCount, membership, genes)
+    return membership, moduleCount, classifiedGeneCount
 
 def run_iteration(iteration, data, membership, kME):
     '''
     run iteration of blockwise WGCNA
     return membership and eigengenes
     '''
-    
+
     # run blockwise WGCNA
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
@@ -393,10 +407,10 @@ def run_iteration(iteration, data, membership, kME):
 
     # evaluate fit & update membership again
     # output pruned membership
-    membership = evaluate_fit(kME, membership, data.rownames)
+    membership, moduleCount, classifiedGeneCount = evaluate_fit(kME, membership, data.rownames)
     write_membership(iteration, membership, True)
 
-    return membership, kME
+    return membership, kME, moduleCount, classifiedGeneCount
 
 # ========================
 # iWGCNA Main
@@ -407,51 +421,90 @@ def iWGCNA():
     runId = 0
     passId = 0
     iteration = set_iteration_label(runId, passId)
-    
+
+    # initialize variables and data (to input DATA)
     kME = None
     membership = None
+    passData = DATA # input data for pass
+    iterationData = passData # input data for iteration
+
+    # initialize convergence flags
     algConverged = False
+    passConverged = False
 
-    iterationIndex = -1
-    data = utils.numeric2real(DATA) #get_expression_subset(DATA, membership, iterationIndex, False)
+    while not algConverged:
+        if passConverged:
+            # set residuals of the pass as new
+            # input dataset for the next pass
+            passData = get_residuals(passData, membership)
 
-    # while not algConverged:
-    membership, kME = run_iteration(iteration, data, membership, kME)
+            # and as the dataset for the current iteration
+            iterationData = passData
 
-    # pass convergence: nResiduals = 0
-    # alg convergence: nFit = 0
+            # set iteration label
+            passId = passId + 1
+            runId = 0
+            iteration = set_iteration_label(runId, passId)
 
-    # restructure: create 2-d matrix of genes by classification per run
+            # reset pass convergence flag
+            passConverged = False
+        else:
+            # remove residuals from data
+            iterationData = remove_residuals(iterationData, membership)
 
+        # run an iteration of WGCNA + goodness of fit test
+        membership, kME, moduleCount, classifiedGeneCount = run_iteration(
+            iteration, iterationData, membership, kME)
 
-    # while not algConverged:
-    #     passId = passId + 1
+        # if there are no residuals
+        # (classified gene count = number of genes input)
+        # then the pass has converged
+        if classifiedGeneCount == iterationData.nrow:
+            passConverged = True
 
-    #     targetDir = args.workingDir + "/pass" + str(passId)
-    #     create_dir(targetDir)
+        # if no modules were detected, then the algorithm has converged
+        if moduleCount == 0:
+            algConverged = True
 
-    #     # first pass -> return all data; otherwise get residuals
-    #     data = get_expression_subset(exprData, result, iterationIndex, False)
+    return membership
 
-    #     passConverged = False
-    #     runId = 0
-    #     while not passConverged:
-    #         iterationIndex = iterationIndex + 1
+def calculate_kme_and_pvalue(expr, eigengene):
 
-    #         runId = runId + 1
-    #         targetDir = targetDir + "/run" + str(runId)
-    #         create_dir(targetDir)
-    #         key = "pass" + str(passId) + "_run" + str(runId)
+def kme_reassign_membership(membership, kME):
+    eigengenes = read_data("eigengenes.txt")
+    warning(eigengenes)
 
-    #         passConverged, algConverged = process_run(data, key, targetDir, args)
-
-    #                     # set data to classified genes
-    #         data = get_expression_subset(exprData, result, iterationIndex, True)
-
+    bestFit = {}
+    # for each eigengene
+    # calculating the kME and p-value for
+    # each gene
+    # if new kME >= existing kME and p_value <= threshold
+    for modules in eigenegenes:
+        module = membership[gene]
+        moduleEigengene = eigengenes.rx(module,)
+        kME, pvalue = kme_and_pvalue(gene, moduleEigengene)
+        
+    
+def main():
+    membership = iWGCNA()
+    
+    membership = kme_reassign_membership(membership)
+    write_membership("final", membership, False)
+    
 if __name__ == "__main__":
 
     try:
         CML_ARGS = parse_command_line_args()
+
+        # import R packages
+        # and initialize R workspace
+
+        wgcna = importr('WGCNA')
+        igraph = importr('igraph')
+        base = importr('base')
+        stats = importr('stats')
+        utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
+
         create_dir(CML_ARGS.workingDir)
         initialize_r_workspace()
 
@@ -461,9 +514,9 @@ if __name__ == "__main__":
             warning("Running WGCNA with the following parameters")
             warning(CML_ARGS.wgcnaParameters)
 
-        DATA = read_data()
+        DATA = read_data(CML_ARGS.inputFile)
 
-        iWGCNA()
+        main()
 
     finally:
         warning("iWGCNA: complete")
