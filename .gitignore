@@ -1,16 +1,6 @@
 
 *.py#
 
-test.R
-
-test.txt
-
-test/pass1/run1/blocks.RData
-
-test/pass1/run1/blockwiseWGCNA-output.pdf
-
-test/pass1/run1/eigengenes.txt
-
 .#iWGCNA.py
 
 rSnippets.pyc

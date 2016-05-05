@@ -437,7 +437,10 @@ def iWGCNA():
             # set residuals of the pass as new
             # input dataset for the next pass
             passData = get_residuals(passData, membership)
-
+            warning(passData)
+            warning(passData.nrows)
+            sys.exit(1)
+            
             # and as the dataset for the current iteration
             iterationData = passData
 
@@ -451,7 +454,8 @@ def iWGCNA():
         else:
             # remove residuals from data
             iterationData = remove_residuals(iterationData, membership)
-
+            warning(iterationData.nrows)
+            
         # run an iteration of WGCNA + goodness of fit test
         membership, kME, moduleCount, classifiedGeneCount = run_iteration(
             iteration, iterationData, membership, kME)
