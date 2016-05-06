@@ -308,6 +308,22 @@ def write_membership(iteration, membership, isPruned):
 
     write_data_frame(df, fileName, "Iteration")
 
+def write_gene_counts(iteration, initial, fit):
+    '''
+    writes the number of kept and dropped genes at the end of an iteration
+    '''
+    fileName = "iteration-summary.txt"
+    try:
+        os.stat(fileName)
+    except OSError:
+        header = ("Iteration", "Initial Count", "Kept (Fit)", "Dropped (Residual)")
+        with open(fileName, 'a') as f:
+            print("\t".join(header), file=f)
+    finally:
+        with open(fileName, 'a') as f:
+            print("\t".join((iteration, str(initial),
+                             str(fit), str(initial - fit))), file=f)
+
 def write_eigengenes(ematrix):
     write_data_frame(ematrix, "eigengenes.txt", "Module")
 
@@ -323,17 +339,23 @@ def get_residuals(expr, membership):
     subsets expression data
     returning expression for only residuals to the fit
     '''
-    return get_member_expression("UNCLASSIFIED", expr, membership)
+    if membership is None:
+        return expr
+    else:
+        return get_member_expression("UNCLASSIFIED", expr, membership)
 
 def remove_residuals(expr, membership):
-    ''' 
+    '''
     subsets expression data
     removing residuals to the fit
     '''
-    return utils.removeUnclassified(expr, ro.DataFrame(membership))
+    if membership is None:
+        return expr
+    else:
+        return utils.removeUnclassified(expr, ro.DataFrame(membership))
 
 def set_iteration_label(runId, passId):
-    label = "p" if passId == 0 else "r-" + str(passId)
+    label = "p" if passId == 0 else "r" + str(passId)
     label = label + "_iter_" + str(runId)
     return label
 
@@ -369,6 +391,10 @@ def evaluate_fit(kME, membership, genes):
     memberCount = {}
     for g in genes:
         module = membership[g]
+
+        if membership == "UNCLASSIFIED":
+            continue
+
         if module in memberCount:
             memberCount[module] = memberCount[module] + 1
         else:
@@ -387,28 +413,36 @@ def run_iteration(iteration, data, membership, kME):
     return membership and eigengenes
     '''
 
+    # convergence criteria
+    moduleCount = 0 # number of modules detected
+    classifiedGeneCount = 0 # number of genes classified
+
+    warning("BLOCKS:","NA" in data.rownames)
     # run blockwise WGCNA
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
         utils.saveObject(blocks, "blocks", iteration + "-blocks.RData")
 
     # extract eigengenes from blocks
+    # if there are eigengenes, then evaluate fitness
     eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
-    write_eigengenes(eigengenes)
+    if eigengenes.nrow != 0:
+        write_eigengenes(eigengenes)
 
-    # extract module membership from blocks and update
-    membership = update_membership(iteration, data.rownames, blocks, membership)
-    write_membership(iteration, membership, False)
+        # extract module membership from blocks and update
+        membership = update_membership(iteration, data.rownames, blocks, membership)
+        write_membership(iteration, membership, False)
 
-    # calculate eigengene connectivity (kME) to
-    # assigned module
-    kME = update_kme(kME, data, membership, eigengenes)
-    write_kme(iteration, kME)
+        # calculate eigengene connectivity (kME) to
+        # assigned module
+        kME = update_kme(kME, data, membership, eigengenes)
+        write_kme(iteration, kME)
 
-    # evaluate fit & update membership again
-    # output pruned membership
-    membership, moduleCount, classifiedGeneCount = evaluate_fit(kME, membership, data.rownames)
-    write_membership(iteration, membership, True)
+        # evaluate fit & update membership again
+        # output pruned membership
+        warning("FIT:", "NA" in data.rownames)
+        membership, moduleCount, classifiedGeneCount = evaluate_fit(kME, membership, data.rownames)
+        write_membership(iteration, membership, True)
 
     return membership, kME, moduleCount, classifiedGeneCount
 
@@ -427,35 +461,17 @@ def iWGCNA():
     membership = None
     passData = DATA # input data for pass
     iterationData = passData # input data for iteration
+    geneSummary = {"initial": iterationData.nrow,
+                   "fit": 0,
+                   "residual":0}
 
     # initialize convergence flags
     algConverged = False
     passConverged = False
 
     while not algConverged:
-        if passConverged:
-            # set residuals of the pass as new
-            # input dataset for the next pass
-            passData = get_residuals(passData, membership)
-            warning(passData)
-            warning(passData.nrows)
-            sys.exit(1)
-            
-            # and as the dataset for the current iteration
-            iterationData = passData
-
-            # set iteration label
-            passId = passId + 1
-            runId = 0
-            iteration = set_iteration_label(runId, passId)
-
-            # reset pass convergence flag
-            passConverged = False
-        else:
-            # remove residuals from data
-            iterationData = remove_residuals(iterationData, membership)
-            warning(iterationData.nrows)
-            
+        iteration = set_iteration_label(runId, passId)
+     
         # run an iteration of WGCNA + goodness of fit test
         membership, kME, moduleCount, classifiedGeneCount = run_iteration(
             iteration, iterationData, membership, kME)
@@ -469,10 +485,33 @@ def iWGCNA():
         # if no modules were detected, then the algorithm has converged
         if moduleCount == 0:
             algConverged = True
+      
+        warning("PASS", passConverged)
+        warning("ALG", algConverged)
+
+        # remove residuals from data to update iteration data
+        # and determine # of dropped genes
+        write_gene_counts(iteration,  iterationData.nrow, classifiedGeneCount)
+
+        if passConverged:
+            # set residuals of the pass as new
+            # input dataset for the next pass
+            passData = get_residuals(passData, membership)
+
+            # and as the dataset for the current iteration
+            iterationData = passData
+
+            # increment pass id and reset run id
+            passId = passId + 1
+            runId = 0
+
+            # reset pass convergence flag
+            passConverged = False
 
     return membership
 
 def calculate_kme_and_pvalue(expr, eigengene):
+    warning("calc kme")
 
 def kme_reassign_membership(membership, kME):
     eigengenes = read_data("eigengenes.txt")
