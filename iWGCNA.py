@@ -17,6 +17,8 @@ from collections import OrderedDict
 import argparse
 import os
 import sys
+import logging
+from time import strftime
 import rpy2.robjects as ro
 from rpy2.robjects.packages import importr, SignatureTranslatedAnonymousPackage
 import rSnippets as rs
@@ -57,16 +59,20 @@ def write_data_frame(df, fileName, rowLabel):
     except OSError:
         header = (rowLabel,) + tuple(df.colnames)
         with open(fileName, 'w') as f:
-            print("\t".join(header), file=f)
+            print('\t'.join(header), file=f)
     finally:
-        df.to_csvfile(fileName, quote=False, sep="\t", col_names=False, append=True)
+        df.to_csvfile(fileName, quote=False, sep='\t', col_names=False, append=True)
 
 def read_data(fileName):
     '''
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
-    data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
+    try:
+        data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
+    except:
+        logger.error("Unable to open input file: " + fileName)
+        sys.exit(1)
     return utils.numeric2real(data)
 
 # ========================
@@ -99,17 +105,17 @@ def helpEpilog():
     text for help epilog
     '''
 
-    inputFileFormatHelp = """ INPUT FILE FORMAT: TBA """
-    wgcnaParametersHelp = """ PARAMETERS: DESCRIBE FORMATS AND DEFAULTS """
+    inputFileFormatHelp = ''' INPUT FILE FORMAT: TBA '''
+    wgcnaParametersHelp = ''' PARAMETERS: DESCRIBE FORMATS AND DEFAULTS '''
 
-    return inputFileFormatHelp + "\n\n" + wgcnaParametersHelp
+    return inputFileFormatHelp + '\n\n' + wgcnaParametersHelp
 
 def parse_command_line_args():
     '''
     parse command line args
     '''
 
-    parser = argparse.ArgumentParser(prog="iWGCNA",
+    parser = argparse.ArgumentParser(prog='iWGCNA',
                                      description="perform interative WGCNA analysis",
                                      epilog=helpEpilog(),
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -127,8 +133,8 @@ def parse_command_line_args():
                         default=os.getcwd())
 
     parser.add_argument('-v', '--verbose',
-                        help='print status messages',
-                        action="store_true")
+                        help="print status messages",
+                        action='store_true')
 
     parser.add_argument('-p', '--wgcnaParameters',
                         help="comma separated list of parameters to be passed to WGCNA's " +
@@ -138,11 +144,12 @@ def parse_command_line_args():
                         type=parameter_list)
 
     parser.add_argument('--allowWGCNAThreads',
-                        action="store_true")
+                        help="allow WGCNA to use threading; see WGCNA manual",
+                        action='store_true')
 
     parser.add_argument('--saveBlocks',
                         help="save WGNCA blockwise modules for each iteration",
-                        action="store_true")
+                        action='store_true')
 
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
@@ -159,18 +166,56 @@ def set_wgcna_parameter_defaults(params):
     if params is None:
         params = {}
 
-    if "numericLabels" not in params:
-        params["numericLabels"] = True
-    if "minKMEtoStay" not in params:
-        params["minKMEtoStay"] = 0.8
-    if "minCoreKME" not in params:
-        params["minCoreKME"] = 0.8
-    if "minModuleSize" not in params:
-        params["minModuleSize"] = 20
-    if "reassignThreshold" not in params:
-        params["reassignThreshold"] = 0.05 # 0.0000001 # 1e-6
+    if 'numericLabels' not in params:
+        params['numericLabels'] = True
+    if 'minKMEtoStay' not in params:
+        params['minKMEtoStay'] = 0.8
+    if 'minCoreKME' not in params:
+        params['minCoreKME'] = 0.8
+    if 'minModuleSize' not in params:
+        params['minModuleSize'] = 20
+    if 'reassignThreshold' not in params:
+        params['reassignThreshold'] = 0.05 # 0.0000001 # 1e-6
 
     return params
+
+
+# ========================
+# Logging
+# ========================
+
+def initialize_log():
+
+    logging.basicConfig(filename=os.path.join(CML_ARGS.workingDir, 'iwgcna.log'),
+                        filemode='w', format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    return logger
+
+def log_parameters():
+    logger.info(strftime("%c"))
+    logger.info("Working directory: " + CML_ARGS.workingDir)
+    logger.info("Allowing WGCNA Threads? " +
+                 "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
+    logger.info("Running WGCNA with the following parameters:")
+    logger.info(CML_ARGS.wgcnaParameters)
+
+    if CML_ARGS.verbose:
+        warning("Working directory: " + CML_ARGS.workingDir)
+        warning("Allowing WGCNA Threads? " +
+                     "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
+        warning("Running WGCNA with the following parameters:")
+        warning(CML_ARGS.wgcnaParameters)
+
+def log_input_data():
+    logger.info("INPUT DATA: " + CML_ARGS.inputFile)
+    logger.info(str(DATA.ncol) + " SAMPLES")
+    logger.info(str(DATA.nrow) + " GENES")
+
+    if CML_ARGS.verbose:
+        warning("INPUT DATA: " + CML_ARGS.inputFile)
+        warning(str(DATA.ncol) + " SAMPLES")
+        warning(str(DATA.nrow) + " GENES")
 
 # ========================
 # R Session Management
@@ -180,9 +225,10 @@ def initialize_r_workspace():
     '''
     initialize the r working environment
     '''
+    base.setwd(CML_ARGS.workingDir)
+
     if CML_ARGS.allowWGCNAThreads:
         wgcna.allowWGCNAThreads()
-    base.setwd(CML_ARGS.workingDir)
 
 # ========================
 # iWGNA Functions
@@ -207,7 +253,7 @@ def run_wgcna(data, iteration):
         params = CML_ARGS.wgcnaParameters
 
     params['datExpr'] = base.t(data) # have to transpose before passing to WGCNA
-    params['saveTOMFileBase'] = iteration + "-TOM"
+    params['saveTOMFileBase'] = iteration + '-TOM'
 
     return wgcna.blockwiseModules(**params)
 
@@ -251,7 +297,7 @@ def write_kme(iteration, kME):
     '''
     df = ro.DataFrame(kME)
     df.rownames = (iteration)
-    write_data_frame(df, "eigengene-connectivity.txt", "Iteration")
+    write_data_frame(df, 'eigengene-connectivity.txt', 'Iteration')
 
 def initialize_membership():
     '''
@@ -262,7 +308,7 @@ def initialize_membership():
     as input data
     '''
 
-    membership = OrderedDict((gene, "UNCLASSIFIED") for gene in DATA.rownames)
+    membership = OrderedDict((gene, 'UNCLASSIFIED') for gene in DATA.rownames)
     return membership
 
 def update_membership(iteration, genes, blocks, membership):
@@ -282,11 +328,11 @@ def update_membership(iteration, genes, blocks, membership):
         # a .0 to the numeric labels when converted to string
         # which needs to be removed
         # note: R array starts at index 1, python at 0
-        module = str(modules.rx(g, 1)[0]).replace(".0", "")
-        if module in ("0", "grey"):
-            module = "UNCLASSIFIED"
+        module = str(modules.rx(g, 1)[0]).replace('.0', '')
+        if module in ('0', 'grey'):
+            module = 'UNCLASSIFIED'
         else:
-            module = iteration + "-" + module
+            module = iteration + '-' + module
 
         membership[g] = module
 
@@ -301,38 +347,38 @@ def write_membership(iteration, membership, isPruned):
     '''
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
-    fileName = "revised-membership.txt" if isPruned else "initial-membership.txt"
+    fileName = 'pruned-membership.txt' if isPruned else 'initial-membership.txt'
     
-    if iteration == "final":
-        fileName = "final-membership.txt"
+    if iteration == 'final':
+        fileName = 'final-membership.txt'
 
-    write_data_frame(df, fileName, "Iteration")
+    write_data_frame(df, fileName, 'Iteration')
 
 def write_gene_counts(iteration, initial, fit):
     '''
     writes the number of kept and dropped genes at the end of an iteration
     '''
-    fileName = "iteration-summary.txt"
+    fileName = 'iteration-gene-count-summary.txt'
     try:
         os.stat(fileName)
     except OSError:
-        header = ("Iteration", "Initial Count", "Kept (Fit)", "Dropped (Residual)")
+        header = ('Iteration', 'Initial', 'Fit', 'Residual')
         with open(fileName, 'a') as f:
-            print("\t".join(header), file=f)
+            print('\t'.join(header), file=f)
     finally:
         with open(fileName, 'a') as f:
-            print("\t".join((iteration, str(initial),
+            print('\t'.join((iteration, str(initial),
                              str(fit), str(initial - fit))), file=f)
 
 def write_eigengenes(ematrix):
-    write_data_frame(ematrix, "eigengenes.txt", "Module")
+    write_data_frame(ematrix, 'eigengenes.txt', 'Module')
 
 def get_member_expression(module, expr, membership):
     '''
     subsets expression data
     returning expression for only members of the specified module
     '''
-    return utils.extractMembers(module, expr, ro.DataFrame(membership))
+    return utils.extractMembers(module, expr, ro.ListVector(membership))
 
 def get_residuals(expr, membership):
     '''
@@ -342,7 +388,7 @@ def get_residuals(expr, membership):
     if membership is None:
         return expr
     else:
-        return get_member_expression("UNCLASSIFIED", expr, membership)
+        return get_member_expression('UNCLASSIFIED', expr, membership)
 
 def remove_residuals(expr, membership):
     '''
@@ -352,11 +398,11 @@ def remove_residuals(expr, membership):
     if membership is None:
         return expr
     else:
-        return utils.removeUnclassified(expr, ro.DataFrame(membership))
+        return utils.removeUnclassified(expr, ro.ListVector(membership))# ro.DataFrame(membership))
 
 def set_iteration_label(runId, passId):
-    label = "p" if passId == 0 else "r" + str(passId)
-    label = label + "_iter_" + str(runId)
+    label = 'p' if passId == 0 else 'r' + str(passId)
+    label = label + '_iter_' + str(runId)
     return label
 
 def remove_small_modules(memberCount, membership, genes):
@@ -371,11 +417,12 @@ def remove_small_modules(memberCount, membership, genes):
     classifiedGeneCount = 0
     for g in genes:
         module = membership[g]
-        if memberCount[module] < CML_ARGS.wgcnaParameters["minModuleSize"]:
-            membership[g] = "UNCLASSIFIED"
-        else:
-            classifiedGeneCount = classifiedGeneCount + 1
-            modules[module] = 1
+        if module != 'UNCLASSIFIED':
+            if memberCount[module] < CML_ARGS.wgcnaParameters['minModuleSize']:
+                membership[g] = 'UNCLASSIFIED'
+            else:
+                classifiedGeneCount = classifiedGeneCount + 1
+                modules[module] = 1
     return membership, len(modules), classifiedGeneCount
 
 def evaluate_fit(kME, membership, genes):
@@ -392,7 +439,7 @@ def evaluate_fit(kME, membership, genes):
     for g in genes:
         module = membership[g]
 
-        if membership == "UNCLASSIFIED":
+        if membership == 'UNCLASSIFIED':
             continue
 
         if module in memberCount:
@@ -400,8 +447,8 @@ def evaluate_fit(kME, membership, genes):
         else:
             memberCount[module] = 1
 
-        if kME[g] < CML_ARGS.wgcnaParameters["minKMEtoStay"]:
-            membership[g] = "UNCLASSIFIED"
+        if kME[g] < CML_ARGS.wgcnaParameters['minKMEtoStay']:
+            membership[g] = 'UNCLASSIFIED'
             memberCount[module] = memberCount[module] - 1
 
     membership, moduleCount, classifiedGeneCount = remove_small_modules(memberCount, membership, genes)
@@ -417,18 +464,17 @@ def run_iteration(iteration, data, membership, kME):
     moduleCount = 0 # number of modules detected
     classifiedGeneCount = 0 # number of genes classified
 
-    warning("BLOCKS:","NA" in data.rownames)
     # run blockwise WGCNA
     blocks = run_wgcna(data, iteration)
     if CML_ARGS.saveBlocks:
-        utils.saveObject(blocks, "blocks", iteration + "-blocks.RData")
+        utils.saveObject(blocks, 'blocks', iteration + '-blocks.RData')
 
     # extract eigengenes from blocks
     # if there are eigengenes, then evaluate fitness
     eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
     if eigengenes.nrow != 0:
         write_eigengenes(eigengenes)
-
+        
         # extract module membership from blocks and update
         membership = update_membership(iteration, data.rownames, blocks, membership)
         write_membership(iteration, membership, False)
@@ -440,7 +486,6 @@ def run_iteration(iteration, data, membership, kME):
 
         # evaluate fit & update membership again
         # output pruned membership
-        warning("FIT:", "NA" in data.rownames)
         membership, moduleCount, classifiedGeneCount = evaluate_fit(kME, membership, data.rownames)
         write_membership(iteration, membership, True)
 
@@ -461,10 +506,7 @@ def iWGCNA():
     membership = None
     passData = DATA # input data for pass
     iterationData = passData # input data for iteration
-    geneSummary = {"initial": iterationData.nrow,
-                   "fit": 0,
-                   "residual":0}
-
+ 
     # initialize convergence flags
     algConverged = False
     passConverged = False
@@ -486,9 +528,6 @@ def iWGCNA():
         if moduleCount == 0:
             algConverged = True
       
-        warning("PASS", passConverged)
-        warning("ALG", algConverged)
-
         # remove residuals from data to update iteration data
         # and determine # of dropped genes
         write_gene_counts(iteration,  iterationData.nrow, classifiedGeneCount)
@@ -508,14 +547,20 @@ def iWGCNA():
             # reset pass convergence flag
             passConverged = False
 
+        else:
+            # other wise remove residuals to see
+            # if classification can be approved after
+            # connections to pruned genes are removed
+            iterationData = remove_residuals(iterationData, membership)
+            runId = runId + 1
+            
     return membership
 
 def calculate_kme_and_pvalue(expr, eigengene):
-    warning("calc kme")
+    logger.debug('calc kme')
 
 def kme_reassign_membership(membership, kME):
-    eigengenes = read_data("eigengenes.txt")
-    warning(eigengenes)
+    eigengenes = read_data('eigengenes.txt')
 
     bestFit = {}
     # for each eigengene
@@ -526,44 +571,45 @@ def kme_reassign_membership(membership, kME):
         module = membership[gene]
         moduleEigengene = eigengenes.rx(module,)
         kME, pvalue = kme_and_pvalue(gene, moduleEigengene)
-        
-    
+
 def main():
     membership = iWGCNA()
     
     membership = kme_reassign_membership(membership)
-    write_membership("final", membership, False)
+    write_membership('final', membership, False)
     
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     try:
         CML_ARGS = parse_command_line_args()
 
+        # set up working environment
+        # ===============================
         # import R packages
-        # and initialize R workspace
-
         wgcna = importr('WGCNA')
         igraph = importr('igraph')
         base = importr('base')
         stats = importr('stats')
-        utils = SignatureTranslatedAnonymousPackage(rs.util_functions, "utils")
+        utils = SignatureTranslatedAnonymousPackage(rs.util_functions, 'utils')
 
-        create_dir(CML_ARGS.workingDir)
+        # create working directory and 
+        # initialize R workspace
+        create_dir(CML_ARGS.workingDir)       
         initialize_r_workspace()
 
-        if CML_ARGS.verbose:
-            warning("Working directory:", CML_ARGS.workingDir)
-            warning("Allowing WGCNA Threads?", "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
-            warning("Running WGCNA with the following parameters")
-            warning(CML_ARGS.wgcnaParameters)
+        # initialize log
+        logger = initialize_log()
+        log_parameters()
 
+        # load input data
         DATA = read_data(CML_ARGS.inputFile)
-
+        log_input_data()
+        
         main()
 
     finally:
-        warning("iWGCNA: complete")
+        logger.info('iWGCNA: complete')
 
 
-__author__ = "Emily Greenfest-Allen"
-__copyright__ = "Copyright 2015, University of Pennsylvania"
+__author__ = 'Emily Greenfest-Allen'
+__copyright__ = 'Copyright 2016, University of Pennsylvania'

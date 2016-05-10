@@ -37,13 +37,17 @@ modules <- function(blocks, geneNames) {
 # extract module members
 # does not assume same ordering
 extractMembers <- function(module, expr, membership) {
-    members = t(membership)[, 1] == module
+    membership <- unlist(membership)
+    membership <- membership[row.names(expr)]
+    members <- membership  == module
     expr[members, ]
 }
 
 # remove unclassified from expression set
 removeUnclassified <- function(expr, membership) {
-    classified = t(membership)[,1] != "UNCLASSIFIED"
+    membership <- unlist(membership)
+    membership <- membership[row.names(expr)]
+    classified = membership != "UNCLASSIFIED"
     expr[classified, ]
 }
 
