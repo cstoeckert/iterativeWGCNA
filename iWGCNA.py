@@ -73,6 +73,7 @@ def read_data(fileName):
     except:
         logger.error("Unable to open input file: " + fileName)
         sys.exit(1)
+
     return utils.numeric2real(data)
 
 def transpose_file_contents(fileName, rowLabel):
@@ -80,8 +81,9 @@ def transpose_file_contents(fileName, rowLabel):
     read in a file to a dataframe, transpose, and output
     '''
     contents = read_data(fileName)
-    contents = ro.DataFrame.transpose(contents)
-    write_data_frame(contents, fileName, rowLabel)
+    contents = base.t(contents)
+    os.remove(os.path.join(CML_ARGS.workingDir,fileName))
+    write_data_frame(base.as_data_frame(contents), fileName, rowLabel)
 
 # ========================
 # Help & Command Line Args
@@ -243,6 +245,8 @@ def initialize_log():
                         filemode='w', format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
+    logging.captureWarnings(True)
+
     return logging.getLogger(__name__)
 
 def log_parameters():
@@ -301,9 +305,28 @@ def initialize_r_workspace():
     # suppress warnings
     ro.r['options'](warn=-1)
 
-    # allow WGCNA to run mutli-threaded
+    # r log
+    rLogger = base.file('R.log', open='wt')
+    base.sink(rLogger, type=base.c('output', 'message'))
+
+
+def allow_wgcna_threads():
+    '''
+    allow WGCNA to run multi-threaded if specified in CML_ARGS
+    '''
     if CML_ARGS.allowWGCNAThreads:
         wgcna.allowWGCNAThreads()
+        
+# ========================
+# Graphical Output
+# ========================
+
+def barplot_summary(data, fileName):
+    '''
+    TO DO
+    '''
+    grdevices.png(file=fileName, width=512, height=512)
+    grdevices.dev_off()
 
 # ========================
 # iWGNA Functions
@@ -364,7 +387,7 @@ def update_kme(kME, data, membership, eigengenes):
         moduleMemberExpression = get_member_expression(module, data, membership)
         memberKME = calculate_kme(moduleMemberExpression, moduleEigengene, False)
         for gene in memberKME.rownames:
-            kME[gene] = memberKME.rx(gene, 1)[0]
+            kME[gene] = round(memberKME.rx(gene, 1)[0], 2)
 
     return kME
 
@@ -425,7 +448,7 @@ def write_membership(iteration, membership, isPruned):
     '''
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
-    fileName = 'pruned-membership.txt' if isPruned else 'initial-membership.txt'
+    fileName = 'membership.txt' if isPruned else 'pre-pruning-membership.txt'
 
     write_data_frame(df, fileName, 'Iteration')
 
@@ -486,7 +509,7 @@ def set_iteration_label(runId, passId):
     label = label + '_iter_' + str(runId)
     return label
 
-def remove_small_modules(memberCount, membership, genes):
+def remove_small_modules(memberCount, membership, kME, genes):
     '''
     checks membership counts and removes
     any modules that are too small
@@ -501,6 +524,7 @@ def remove_small_modules(memberCount, membership, genes):
         if module != 'UNCLASSIFIED':
             if memberCount[module] < CML_ARGS.wgcnaParameters['minModuleSize']:
                 membership[g] = 'UNCLASSIFIED'
+                kME[g] = float('NaN')
             else:
                 classifiedGeneCount = classifiedGeneCount + 1
                 modules[module] = 1
@@ -520,7 +544,8 @@ def evaluate_fit(kME, membership, genes):
     for g in genes:
         module = membership[g]
 
-        if membership == 'UNCLASSIFIED':
+        if module == 'UNCLASSIFIED':
+            # kME[g] = float('NaN')
             continue
 
         if module in memberCount:
@@ -530,10 +555,11 @@ def evaluate_fit(kME, membership, genes):
 
         if kME[g] < CML_ARGS.wgcnaParameters['minKMEtoStay']:
             membership[g] = 'UNCLASSIFIED'
+            kME[g] = float('NaN')
             memberCount[module] = memberCount[module] - 1
 
     membership, moduleCount, classifiedGeneCount = remove_small_modules(memberCount, membership,
-                                                                        genes)
+                                                                        kME, genes)
     return membership, moduleCount, classifiedGeneCount
 
 def run_iteration(iteration, data, membership, kME):
@@ -645,36 +671,68 @@ def iWGCNA():
 
     return membership, kME
 
-def reassign_membership(membership, kME):
+def equal_eigengene(e1, e2):
+    '''
+    check if 2 eigengenes are equal (correlation ~ 1)
+    '''
+    correlation = base.as_data_frame(stats.cor(base.t(e1), base.t(e2)))
+    correlation = round(correlation.rx(1, 1)[0], 1)
+    return correlation == 1
+
+def get_final_modules(membership):
+    '''
+    gets list of modules in final membership assignments
+    '''
+    modules = {}
+    for gene in membership:
+        module = membership[gene]
+        if module != "UNCLASSIFIED":
+            modules[module] = 1
+
+    return list(modules.keys())
+
+def reassign_membership(finalModules, membership, kME):
     '''
     Evaluate eigengene connectivity (kME)
-    for each gene against each module
-    eigengene.  If kME(module) > kME(assigned_module)
+    for each gene against the eigengenes for each
+    of the final modules found by iWGCNA.
+    If kME(module) > kME(assigned_module)
     and the p-value <= the reassignThreshold (of WGCNA
     parameters) then reassign the module
-    membership of the gene
+    membership of the gene.
     '''
 
     eigengenes = read_data('eigengenes.txt')
     reassignmentCount = 0
+
     for module in eigengenes.rownames:
+
+        # if module not in the final list; ignore
+        if module not in finalModules:
+            continue
+
         # calculate kME of all genes to the module eigengene
         moduleEigengene = eigengenes.rx(module, True)
         moduleKME = calculate_kme(DATA, moduleEigengene, True)
 
+        # evaluate each gene
         for gene in membership:
             currentModule = membership[gene]
+
+            if module == currentModule or \
+              equal_eigengene(moduleEigengene, eigengenes.rx(currentModule, True)):
+                continue
+
             currentKME = kME[gene]
 
-            newKME = moduleKME.rx2('cor').rx(gene, 1)[0]
+            newKME = round(moduleKME.rx2('cor').rx(gene, 1)[0], 2)
             pvalue = moduleKME.rx2('p').rx(gene, 1)[0]
-
-            # logger.debug('\t'.join((gene, currentModule, str(currentKME), module, str(newKME), str(pvalue))))
 
             if (currentModule == "UNCLASSIFIED" \
                 and newKME >= CML_ARGS.wgcnaParameters['minKMEtoStay']) \
                 or (newKME > currentKME \
                 and pvalue < CML_ARGS.wgcnaParameters['reassignThreshold']):
+                # logger.debug('\t'.join((gene, currentModule, str(currentKME), module, str(newKME), str(pvalue))))
                 membership[gene] = module
                 kME[gene] = newKME
                 reassignmentCount = reassignmentCount + 1
@@ -699,45 +757,59 @@ def main():
 
     # use kME goodness of fit to reassign module
     # membership now that all modules are estimated
-    membership, kME = reassign_membership(membership, kME)
+    finalModules = get_final_modules(membership)
+    logger.info("Found " + str(len(finalModules)) + " modules.")
+    logger.info(finalModules)
+
+    membership, kME = reassign_membership(finalModules, membership, kME)
     write_membership('final', membership, True)
     write_kme('final', kME)
 
     # transpose membership and kME files (so samples are columns)
+    transpose_file_contents("pre-pruning-membership.txt", "Gene")
+    transpose_file_contents("membership.txt", "Gene")
+    transpose_file_contents("eigengene-connectivity.txt", "Module")
 
+    
 if __name__ == '__main__':
     logger = None
-    
     try:
         CML_ARGS = parse_command_line_args()
 
-        # set up working environment
+        # create working directory
+        create_dir(CML_ARGS.workingDir)
+
+        # initialize R workspace & log
         # ===============================
-        # import R packages
-        wgcna = importr('WGCNA')
-        igraph = importr('igraph')
+        # initialize R workspace and log
         base = importr('base')
+        initialize_r_workspace()
+
+        wgcna = importr('WGCNA')
+        allow_wgcna_threads()
+
+        igraph = importr('igraph')
         stats = importr('stats')
+        graphics = importr('graphics')
+        grdevices = importr('grDevices')
         utils = SignatureTranslatedAnonymousPackage(rs.util_functions, 'utils')
 
-        # create working directory and
-        # initialize R workspace
-        create_dir(CML_ARGS.workingDir)
-        initialize_r_workspace()
-    
         # initialize log
         logger = initialize_log()
         log_parameters()
-        
+
         # load input data
         DATA = read_data(CML_ARGS.inputFile)
         log_input_data()
 
         main()
-
+        logger.info('iWGCNA: DONE')
+        
+    except Exception:
+        logger.exception('iWGCNA: FAILED')
+     
     finally:
         if logger is not None:
-            logger.info('iWGCNA: FINISHED')
             logger.info(strftime("%c"))
 
 __author__ = 'Emily Greenfest-Allen'
