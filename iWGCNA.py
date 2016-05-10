@@ -75,6 +75,14 @@ def read_data(fileName):
         sys.exit(1)
     return utils.numeric2real(data)
 
+def transpose_file_contents(fileName, rowLabel):
+    '''
+    read in a file to a dataframe, transpose, and output
+    '''
+    contents = read_data(fileName)
+    contents = ro.DataFrame.transpose(contents)
+    write_data_frame(contents, fileName, rowLabel)
+
 # ========================
 # Help & Command Line Args
 # ========================
@@ -105,8 +113,49 @@ def helpEpilog():
     text for help epilog
     '''
 
-    inputFileFormatHelp = ''' INPUT FILE FORMAT: TBA '''
-    wgcnaParametersHelp = ''' PARAMETERS: DESCRIBE FORMATS AND DEFAULTS '''
+    inputFileFormatHelp = ''' 
+------------------------------------------------------
+Input File Format
+------------------------------------------------------
+iWGCNA expects a tab-delimited text file containing 
+gene expression data arranged such that there is one
+row per gene and one column per sample.  The first column
+should contain unique gene identifiers.  For example:
+
+GENE    Sample1    Sample2    Sample3
+Gata1    500    715    1000
+Phtf2    60    1000    1600
+'''
+    wgcnaParametersHelp = '''
+------------------------------------------------------
+WGCNA Parameters
+------------------------------------------------------
+iWGCNA can accept any parameter valid for the WGCNA
+blockwiseModules function.  
+
+See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
+
+To specify these parameters use the --wgcnaParameters flag followed by
+a comma separated list of parameter=value pairs.  For example:
+
+--wgcnaParameters maxBlockSize = 5000,corType=bicor,power=10
+
+sets the maximum block size to 5000 genes,
+the correlation type to the biweight correlation,
+and the power-law scaling factor (beta) to 10
+
+If parameters are not specified, iWGCNA uses the default WGCNA settings,
+except for the following:
+
+minModuleSize=20
+saveTOMs=TRUE
+minKMEtoStay=0.8
+minCoreKME=0.8
+reassignThreshold=0.05
+networkType=signed
+numericLabels=TRUE
+
+'''
 
     return inputFileFormatHelp + '\n\n' + wgcnaParametersHelp
 
@@ -118,13 +167,14 @@ def parse_command_line_args():
     parser = argparse.ArgumentParser(prog='iWGCNA',
                                      description="perform interative WGCNA analysis",
                                      epilog=helpEpilog(),
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                     formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('-i', '--inputFile',
                         metavar='<gene expression file>',
-                        help="full path to input gene expression file; " +
-                        "if full path is not provided, " +
-                        "assumes the file is in the working directory",
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
                         required=True)
 
     parser.add_argument('-o', '--workingDir',
@@ -137,14 +187,15 @@ def parse_command_line_args():
                         action='store_true')
 
     parser.add_argument('-p', '--wgcnaParameters',
-                        help="comma separated list of parameters to be passed to WGCNA's " +
-                        "blockwiseModules function; " +
-                        "e.g., power=6,randomSeed=1234875; " +
-                        " see WGCNA manual",
+                        metavar='<param list>',
+                        help="comma separated list of parameters to be passed to WGCNA's "
+                        + "blockwiseModules function\n"
+                        + "e.g., power=6,randomSeed=1234875\n"
+                        + "see WGCNA manual & more info below",
                         type=parameter_list)
 
     parser.add_argument('--allowWGCNAThreads',
-                        help="allow WGCNA to use threading; see WGCNA manual",
+                        help="allow WGCNA to use threading;\nsee WGCNA manual",
                         action='store_true')
 
     parser.add_argument('--saveBlocks',
@@ -185,29 +236,37 @@ def set_wgcna_parameter_defaults(params):
 # ========================
 
 def initialize_log():
-
+    '''
+    initialize log by setting path and file format
+    '''
     logging.basicConfig(filename=os.path.join(CML_ARGS.workingDir, 'iwgcna.log'),
                         filemode='w', format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
-    return logger
+
+    return logging.getLogger(__name__)
 
 def log_parameters():
+    '''
+    log WGCNA parameter choices and working directory name
+    '''
     logger.info(strftime("%c"))
     logger.info("Working directory: " + CML_ARGS.workingDir)
-    logger.info("Allowing WGCNA Threads? " +
-                 "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
+    logger.info("Allowing WGCNA Threads? "
+                + ("TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE"))
     logger.info("Running WGCNA with the following parameters:")
     logger.info(CML_ARGS.wgcnaParameters)
 
     if CML_ARGS.verbose:
         warning("Working directory: " + CML_ARGS.workingDir)
-        warning("Allowing WGCNA Threads? " +
-                     "TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE")
+        warning("Allowing WGCNA Threads? "
+                + ("TRUE" if CML_ARGS.allowWGCNAThreads else "FALSE"))
         warning("Running WGCNA with the following parameters:")
         warning(CML_ARGS.wgcnaParameters)
 
 def log_input_data():
+    '''
+    log size of input data
+    '''
     logger.info("INPUT DATA: " + CML_ARGS.inputFile)
     logger.info(str(DATA.ncol) + " SAMPLES")
     logger.info(str(DATA.nrow) + " GENES")
@@ -217,6 +276,17 @@ def log_input_data():
         warning(str(DATA.ncol) + " SAMPLES")
         warning(str(DATA.nrow) + " GENES")
 
+def log_pass_completion(passId, iteration, initialGeneCount,
+                        classifiedGeneCount, moduleCount):
+    '''
+    summarize pass in log when convergence condition is met
+    '''
+    message = "Pass " + str(passId) + " converged on iteration " + iteration + "."
+    message = message + " FIT: " + str(classifiedGeneCount) + "; RESIDUAL: "
+    message = message + str(initialGeneCount - classifiedGeneCount)
+    message = message + "; MODULES: " + str(moduleCount)
+    logger.info(message)
+
 # ========================
 # R Session Management
 # ========================
@@ -225,8 +295,13 @@ def initialize_r_workspace():
     '''
     initialize the r working environment
     '''
+    # set working directory
     base.setwd(CML_ARGS.workingDir)
 
+    # suppress warnings
+    ro.r['options'](warn=-1)
+
+    # allow WGCNA to run mutli-threaded
     if CML_ARGS.allowWGCNAThreads:
         wgcna.allowWGCNAThreads()
 
@@ -240,7 +315,7 @@ def calculate_kme(expr, eigengene, calculateP):
     between an eigengene and expression data set
     '''
     if calculateP:
-        correlation = None
+        correlation = wgcna.corAndPvalue(base.t(expr), base.t(eigengene))
     else:
         correlation = base.as_data_frame(stats.cor(base.t(expr), base.t(eigengene)))
     return correlation
@@ -351,9 +426,6 @@ def write_membership(iteration, membership, isPruned):
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
     fileName = 'pruned-membership.txt' if isPruned else 'initial-membership.txt'
-   
-    #if iteration == 'final':
-    #    fileName = 'final-membership.txt'
 
     write_data_frame(df, fileName, 'Iteration')
 
@@ -374,6 +446,9 @@ def write_gene_counts(iteration, initial, fit):
                              str(fit), str(initial - fit))), file=f)
 
 def write_eigengenes(ematrix):
+    '''
+    writes the eigengene matrix to file
+    '''
     write_data_frame(ematrix, 'eigengenes.txt', 'Module')
 
 def get_member_expression(module, expr, membership):
@@ -404,6 +479,9 @@ def remove_residuals(expr, membership):
         return utils.removeUnclassified(expr, ro.ListVector(membership))# ro.DataFrame(membership))
 
 def set_iteration_label(runId, passId):
+    '''
+    generates the unique label for the iteration
+    '''
     label = 'p' if passId == 0 else 'r' + str(passId)
     label = label + '_iter_' + str(runId)
     return label
@@ -454,7 +532,8 @@ def evaluate_fit(kME, membership, genes):
             membership[g] = 'UNCLASSIFIED'
             memberCount[module] = memberCount[module] - 1
 
-    membership, moduleCount, classifiedGeneCount = remove_small_modules(memberCount, membership, genes)
+    membership, moduleCount, classifiedGeneCount = remove_small_modules(memberCount, membership,
+                                                                        genes)
     return membership, moduleCount, classifiedGeneCount
 
 def run_iteration(iteration, data, membership, kME):
@@ -477,7 +556,7 @@ def run_iteration(iteration, data, membership, kME):
     eigengenes = utils.eigengenes(iteration, blocks, data.colnames)
     if eigengenes.nrow != 0:
         write_eigengenes(eigengenes)
-        
+
         # extract module membership from blocks and update
         membership = update_membership(iteration, data.rownames, blocks, membership)
         write_membership(iteration, membership, False)
@@ -499,6 +578,9 @@ def run_iteration(iteration, data, membership, kME):
 # ========================
 
 def iWGCNA():
+    '''
+    run iterative WGCNA
+    '''
     # initialize iteration counters and iteration labels
     runId = 0
     passId = 0
@@ -509,14 +591,14 @@ def iWGCNA():
     membership = None
     passData = DATA # input data for pass
     iterationData = passData # input data for iteration
- 
+
     # initialize convergence flags
     algConverged = False
     passConverged = False
 
     while not algConverged:
         iteration = set_iteration_label(runId, passId)
-     
+
         # run an iteration of WGCNA + goodness of fit test
         membership, kME, moduleCount, classifiedGeneCount = run_iteration(
             iteration, iterationData, membership, kME)
@@ -531,10 +613,14 @@ def iWGCNA():
         # then the algorithm has converged
         if moduleCount == 0:
             algConverged = True
-      
-        write_gene_counts(iteration,  iterationData.nrow, classifiedGeneCount)
+            logger.info("CLASSIFICATION COMPLETE")
+
+        write_gene_counts(iteration, iterationData.nrow, classifiedGeneCount)
 
         if passConverged:
+            log_pass_completion(passId, iteration, passData.nrow,
+                                classifiedGeneCount, moduleCount)
+
             # set residuals of the pass as new
             # input dataset for the next pass
             passData = get_residuals(passData, membership)
@@ -556,7 +642,7 @@ def iWGCNA():
             # connections to pruned genes are removed
             iterationData = remove_residuals(iterationData, membership)
             runId = runId + 1
-            
+
     return membership, kME
 
 def reassign_membership(membership, kME):
@@ -568,23 +654,46 @@ def reassign_membership(membership, kME):
     parameters) then reassign the module
     membership of the gene
     '''
-    
-    # iterate over eigengenes
+
     eigengenes = read_data('eigengenes.txt')
-    for module in eigenegenes:
-        moduleEigengene = eigengenes.rx(module,)
+    reassignmentCount = 0
+    for module in eigengenes.rownames:
+        # calculate kME of all genes to the module eigengene
+        moduleEigengene = eigengenes.rx(module, True)
         moduleKME = calculate_kme(DATA, moduleEigengene, True)
-        for gene in moduleKME.rownames:
-            geneKME = moduleKME.rx(gene, 1)[0]
-            genePValue = moduleKME.rx(gene,2)[0]
 
-            if geneKME > kME[gene] and genePValue < CML_ARGS.wgcnaParameters['reassignThreshold']:
+        for gene in membership:
+            currentModule = membership[gene]
+            currentKME = kME[gene]
+
+            newKME = moduleKME.rx2('cor').rx(gene, 1)[0]
+            pvalue = moduleKME.rx2('p').rx(gene, 1)[0]
+
+            # logger.debug('\t'.join((gene, currentModule, str(currentKME), module, str(newKME), str(pvalue))))
+
+            if (currentModule == "UNCLASSIFIED" \
+                and newKME >= CML_ARGS.wgcnaParameters['minKMEtoStay']) \
+                or (newKME > currentKME \
+                and pvalue < CML_ARGS.wgcnaParameters['reassignThreshold']):
                 membership[gene] = module
-                kME[gene] = geneKME
+                kME[gene] = newKME
+                reassignmentCount = reassignmentCount + 1
 
+    logger.info("Reassigned " + str(reassignmentCount) + " genes in final kME review.")
     return membership, kME
-    
+
 def main():
+    '''
+    main function:
+    1. run iterative WGCNA
+    2. make last check goodness of fit test to
+       reassign module membership(s) after all
+       iterations
+    3. transpose output files so samples are in
+       columns and genes in rows to improve
+       readability
+    '''
+
     # run iterative WGCNA
     membership, kME = iWGCNA()
 
@@ -594,10 +703,11 @@ def main():
     write_membership('final', membership, True)
     write_kme('final', kME)
 
-    # transpose output files (so genes are in rows)
-    
-if __name__ == '__main__':
+    # transpose membership and kME files (so samples are columns)
 
+if __name__ == '__main__':
+    logger = None
+    
     try:
         CML_ARGS = parse_command_line_args()
 
@@ -610,24 +720,25 @@ if __name__ == '__main__':
         stats = importr('stats')
         utils = SignatureTranslatedAnonymousPackage(rs.util_functions, 'utils')
 
-        # create working directory and 
+        # create working directory and
         # initialize R workspace
-        create_dir(CML_ARGS.workingDir)       
+        create_dir(CML_ARGS.workingDir)
         initialize_r_workspace()
-
+    
         # initialize log
         logger = initialize_log()
         log_parameters()
-
+        
         # load input data
         DATA = read_data(CML_ARGS.inputFile)
         log_input_data()
-        
+
         main()
 
     finally:
-        logger.info('iWGCNA: complete')
-
+        if logger is not None:
+            logger.info('iWGCNA: FINISHED')
+            logger.info(strftime("%c"))
 
 __author__ = 'Emily Greenfest-Allen'
 __copyright__ = 'Copyright 2016, University of Pennsylvania'
