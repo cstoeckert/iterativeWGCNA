@@ -234,12 +234,15 @@ def initialize_r_workspace():
 # iWGNA Functions
 # ========================
 
-def calculate_kme(expr, eigengene):
+def calculate_kme(expr, eigengene, calculateP):
     '''
     calculates eigengene connectivity kme
     between an eigengene and expression data set
     '''
-    correlation = base.as_data_frame(stats.cor(base.t(expr), base.t(eigengene)))
+    if calculateP:
+        correlation = None
+    else:
+        correlation = base.as_data_frame(stats.cor(base.t(expr), base.t(eigengene)))
     return correlation
 
 def run_wgcna(data, iteration):
@@ -283,8 +286,8 @@ def update_kme(kME, data, membership, eigengenes):
 
     for module in eigengenes.rownames:
         moduleEigengene = eigengenes.rx(module, True)
-        moduleMembers = get_member_expression(module, data, membership)
-        memberKME = calculate_kme(moduleMembers, moduleEigengene)
+        moduleMemberExpression = get_member_expression(module, data, membership)
+        memberKME = calculate_kme(moduleMemberExpression, moduleEigengene, False)
         for gene in memberKME.rownames:
             kME[gene] = memberKME.rx(gene, 1)[0]
 
@@ -348,9 +351,9 @@ def write_membership(iteration, membership, isPruned):
     df = ro.DataFrame(membership)
     df.rownames = (iteration)
     fileName = 'pruned-membership.txt' if isPruned else 'initial-membership.txt'
-    
-    if iteration == 'final':
-        fileName = 'final-membership.txt'
+   
+    #if iteration == 'final':
+    #    fileName = 'final-membership.txt'
 
     write_data_frame(df, fileName, 'Iteration')
 
@@ -524,12 +527,11 @@ def iWGCNA():
         if classifiedGeneCount == iterationData.nrow:
             passConverged = True
 
-        # if no modules were detected, then the algorithm has converged
+        # if no modules were detected,
+        # then the algorithm has converged
         if moduleCount == 0:
             algConverged = True
       
-        # remove residuals from data to update iteration data
-        # and determine # of dropped genes
         write_gene_counts(iteration,  iterationData.nrow, classifiedGeneCount)
 
         if passConverged:
@@ -548,35 +550,51 @@ def iWGCNA():
             passConverged = False
 
         else:
-            # other wise remove residuals to see
-            # if classification can be approved after
+            # other wise remove residuals and run again
+            # with classified gene set to evaluate whether
+            # classification can be improved after
             # connections to pruned genes are removed
             iterationData = remove_residuals(iterationData, membership)
             runId = runId + 1
             
-    return membership
+    return membership, kME
 
-def calculate_kme_and_pvalue(expr, eigengene):
-    logger.debug('calc kme')
-
-def kme_reassign_membership(membership, kME):
-    eigengenes = read_data('eigengenes.txt')
-
-    bestFit = {}
-    # for each eigengene
-    # calculating the kME and p-value for
-    # each gene
-    # if new kME >= existing kME and p_value <= threshold
-    for modules in eigenegenes:
-        module = membership[gene]
-        moduleEigengene = eigengenes.rx(module,)
-        kME, pvalue = kme_and_pvalue(gene, moduleEigengene)
-
-def main():
-    membership = iWGCNA()
+def reassign_membership(membership, kME):
+    '''
+    Evaluate eigengene connectivity (kME)
+    for each gene against each module
+    eigengene.  If kME(module) > kME(assigned_module)
+    and the p-value <= the reassignThreshold (of WGCNA
+    parameters) then reassign the module
+    membership of the gene
+    '''
     
-    membership = kme_reassign_membership(membership)
-    write_membership('final', membership, False)
+    # iterate over eigengenes
+    eigengenes = read_data('eigengenes.txt')
+    for module in eigenegenes:
+        moduleEigengene = eigengenes.rx(module,)
+        moduleKME = calculate_kme(DATA, moduleEigengene, True)
+        for gene in moduleKME.rownames:
+            geneKME = moduleKME.rx(gene, 1)[0]
+            genePValue = moduleKME.rx(gene,2)[0]
+
+            if geneKME > kME[gene] and genePValue < CML_ARGS.wgcnaParameters['reassignThreshold']:
+                membership[gene] = module
+                kME[gene] = geneKME
+
+    return membership, kME
+    
+def main():
+    # run iterative WGCNA
+    membership, kME = iWGCNA()
+
+    # use kME goodness of fit to reassign module
+    # membership now that all modules are estimated
+    membership, kME = reassign_membership(membership, kME)
+    write_membership('final', membership, True)
+    write_kme('final', kME)
+
+    # transpose output files (so genes are in rows)
     
 if __name__ == '__main__':
 

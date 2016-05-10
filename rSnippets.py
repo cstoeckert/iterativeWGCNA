@@ -39,7 +39,7 @@ modules <- function(blocks, geneNames) {
 extractMembers <- function(module, expr, membership) {
     membership <- unlist(membership)
     membership <- membership[row.names(expr)]
-    members <- membership  == module
+    members <- membership == module
     expr[members, ]
 }
 
