@@ -32,6 +32,7 @@ def warning(prefix, *objs):
     wrapper for writing to stderr
     '''
     print(prefix, *objs, file=sys.stderr)
+    sys.stderr.flush()
 
 # ========================
 # I/O and File Management
@@ -76,14 +77,17 @@ def read_data(fileName):
 
     return utils.numeric2real(data)
 
-def transpose_file_contents(fileName, rowLabel):
+def transpose_file_contents(fileName):
     '''
     read in a file to a dataframe, transpose, and output
     '''
-    contents = read_data(fileName)
-    contents = base.t(contents)
-    os.remove(os.path.join(CML_ARGS.workingDir,fileName))
-    write_data_frame(base.as_data_frame(contents), fileName, rowLabel)
+    with open(fileName, 'r') as f:
+        content = [line.rstrip().split() for line in f]
+
+    with open("t-" + fileName, 'w') as f:
+        for line in zip(*content):
+            print('\t'.join(line), file=f)
+
 
 # ========================
 # Help & Command Line Args
@@ -271,14 +275,14 @@ def log_input_data():
     '''
     log size of input data
     '''
-    logger.info("INPUT DATA: " + CML_ARGS.inputFile)
-    logger.info(str(DATA.ncol) + " SAMPLES")
-    logger.info(str(DATA.nrow) + " GENES")
+    logger.info("Loaded file: " + CML_ARGS.inputFile)
+    logger.info(str(DATA.ncol) + " Samples")
+    logger.info(str(DATA.nrow) + " Genes")
 
     if CML_ARGS.verbose:
-        warning("INPUT DATA: " + CML_ARGS.inputFile)
-        warning(str(DATA.ncol) + " SAMPLES")
-        warning(str(DATA.nrow) + " GENES")
+        warning("File: " + CML_ARGS.inputFile)
+        warning(str(DATA.ncol) + " Samples")
+        warning(str(DATA.nrow) + " Genes")
 
 def log_pass_completion(passId, iteration, initialGeneCount,
                         classifiedGeneCount, moduleCount):
@@ -290,6 +294,8 @@ def log_pass_completion(passId, iteration, initialGeneCount,
     message = message + str(initialGeneCount - classifiedGeneCount)
     message = message + "; MODULES: " + str(moduleCount)
     logger.info(message)
+    if CML_ARGS.verbose:
+        warning(message)
 
 # ========================
 # R Session Management
@@ -505,8 +511,7 @@ def set_iteration_label(runId, passId):
     '''
     generates the unique label for the iteration
     '''
-    label = 'p' if passId == 0 else 'r' + str(passId)
-    label = label + '_iter_' + str(runId)
+    label = 'p' + str(passId) + '_iter_' + str(runId)
     return label
 
 def remove_small_modules(memberCount, membership, kME, genes):
@@ -568,6 +573,9 @@ def run_iteration(iteration, data, membership, kME):
     return membership and eigengenes
     '''
 
+    if CML_ARGS.verbose:
+        warning("Running iteration: " + iteration)
+        
     # convergence criteria
     moduleCount = 0 # number of modules detected
     classifiedGeneCount = 0 # number of genes classified
@@ -608,8 +616,8 @@ def iWGCNA():
     run iterative WGCNA
     '''
     # initialize iteration counters and iteration labels
-    runId = 0
-    passId = 0
+    runId = 1
+    passId = 1
     iteration = set_iteration_label(runId, passId)
 
     # initialize variables and data (to input DATA)
@@ -639,8 +647,12 @@ def iWGCNA():
         # then the algorithm has converged
         if moduleCount == 0:
             algConverged = True
-            logger.info("CLASSIFICATION COMPLETE")
-
+            message = "No modules detected for iteration " + iteration \
+                      + ". Classification complete."
+            logger.info(message)
+            if CML_ARGS.verbose:
+                warning(message)
+       
         write_gene_counts(iteration, iterationData.nrow, classifiedGeneCount)
 
         if passConverged:
@@ -656,7 +668,7 @@ def iWGCNA():
 
             # increment pass id and reset run id
             passId = passId + 1
-            runId = 0
+            runId = 1
 
             # reset pass convergence flag
             passConverged = False
@@ -752,9 +764,13 @@ def main():
        readability
     '''
 
+    if CML_ARGS.verbose:
+        warning("Starting iWGCNA")
     # run iterative WGCNA
     membership, kME = iWGCNA()
 
+    if CML_ARGS.verbose:
+        warning("Making final goodness of fit assessment")
     # use kME goodness of fit to reassign module
     # membership now that all modules are estimated
     finalModules = get_final_modules(membership)
@@ -765,17 +781,20 @@ def main():
     write_membership('final', membership, True)
     write_kme('final', kME)
 
+    if CML_ARGS.verbose:
+        warning("Generating final output")
     # transpose membership and kME files (so samples are columns)
-    transpose_file_contents("pre-pruning-membership.txt", "Gene")
-    transpose_file_contents("membership.txt", "Gene")
-    transpose_file_contents("eigengene-connectivity.txt", "Module")
+    transpose_file_contents("pre-pruning-membership.txt")
+    transpose_file_contents("membership.txt")
+    transpose_file_contents("eigengene-connectivity.txt")
 
-    
 if __name__ == '__main__':
     logger = None
     try:
         CML_ARGS = parse_command_line_args()
 
+        if CML_ARGS.verbose:
+            warning("Initializing workspace")
         # create working directory
         create_dir(CML_ARGS.workingDir)
 
@@ -799,6 +818,8 @@ if __name__ == '__main__':
         log_parameters()
 
         # load input data
+        if CML_ARGS.verbose:
+            warning("Loading Data")
         DATA = read_data(CML_ARGS.inputFile)
         log_input_data()
 
