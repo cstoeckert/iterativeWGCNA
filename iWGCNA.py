@@ -27,12 +27,11 @@ import rSnippets as rs
 # Utilities
 # ========================
 
-def warning(prefix, *objs):
+def warning(*objs):
     '''
     wrapper for writing to stderr
     '''
-    print(prefix, *objs, file=sys.stderr)
-    sys.stderr.flush()
+    print(*objs, file=sys.stderr, flush=True)
 
 # ========================
 # I/O and File Management
