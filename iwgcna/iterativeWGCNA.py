@@ -132,6 +132,9 @@ def main(args):
         # extract final eigengene matrix
         eigengeneMatrix = eigengenes.load_from_file('eigengenes.txt')
         eigengeneMatrix = eigengenes.extract_modules(eigengeneMatrix, modules)
+
+        eigengeneMatrix, membershipMap = membership.merge_similar_modules(eigengeneMatrix, membershipMap)
+        
         eigengenes.write(eigengeneMatrix, True)
 
         reassignedCount, membershipMap, kmeMap = membership.best_fit(membershipMap, eigengeneMatrix, data,
@@ -149,7 +152,7 @@ def main(args):
         # transpose membership and kME files (so samples are columns)
         io.transpose_file_contents("pre-pruning-membership.txt", 'Gene')
         io.transpose_file_contents("membership.txt", 'Gene')
-        io.transpose_file_contents("eigengene-connectivity.txt")
+        io.transpose_file_contents("eigengene-connectivity.txt", 'Module')
 
         logger.info('iWGCNA: SUCCESS')
 
