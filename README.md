@@ -15,7 +15,7 @@ iterativeWGCNA has the following dependencies:
 
 ### R language for statistical computing
 
-[R]:(https://cran.r-project.org/) version 3.* must be available on the system and the binary executable in the system PATH
+[R](https://cran.r-project.org/) version 3.* must be available on the system and the binary executable in the system PATH
 
 1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductore dependencies
 
