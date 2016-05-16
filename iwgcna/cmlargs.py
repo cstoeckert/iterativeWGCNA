@@ -137,6 +137,7 @@ def parse_command_line_args():
                         + " merging close modules after algorithm convergence;"
                         + " must be in the range (0.0, 1.0]",
                         default=0.05,
+                        metavar='<dissimilarity>',
                         type=restricted_float)
 
     args = parser.parse_args()
