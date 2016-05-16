@@ -5,8 +5,9 @@ manage module membership lists
 import logging
 from collections import OrderedDict
 import rpy2.robjects as ro
-from ..r.imports import r_utils
-from ..utils.io import write_data_frame, warning
+from .r.imports import r_utils
+from .io.utils import write_data_frame
+
 # from .eigengenes import equal as eigen_equal
 from . import kme
 

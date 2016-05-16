@@ -14,12 +14,14 @@ R dependencies:
 import logging
 import sys
 from time import strftime
+
 from . import warning
 from .r.utils import initialize_r_workspace
 from . import membership, kme, eigengenes, expression
-from .utils import io as iwgcna_io
-from .utils import log
-from .import process as manager
+import iwgcna.io.utils as io
+import iwgcna.io.summary as summary
+from .io import log
+import iwgcna.manager as manager
 
 def iterative_wgcna(data, args):
     '''
@@ -49,7 +51,8 @@ def iterative_wgcna(data, args):
             args.wgcnaParameters, args.saveBlocks)
 
         moduleCount = membership.count_modules(membershipMap, iterationData.rownames)
-        classifiedGeneCount = membership.count_classified_genes(membershipMap, iterationData.rownames)
+        classifiedGeneCount = membership.count_classified_genes(membershipMap,
+                                                                iterationData.rownames)
 
         # if there are no residuals
         # (classified gene count = number of genes input)
@@ -67,13 +70,13 @@ def iterative_wgcna(data, args):
             if args.verbose:
                 warning(message)
 
-        manager.write_gene_counts(iteration, iterationData.nrow, classifiedGeneCount)
+        summary.write_gene_counts(iteration, iterationData.nrow, classifiedGeneCount)
 
         if passConverged:
-            summary = log.pass_completion(passId, iteration, passData.nrow,
-                                          classifiedGeneCount, moduleCount)
+            geneSummary = log.pass_completion(passId, iteration, passData.nrow,
+                                              classifiedGeneCount, moduleCount)
             if args.verbose:
-                warning(summary)
+                warning(geneSummary)
 
             # set residuals of the pass as new
             # input dataset for the next pass
@@ -144,9 +147,9 @@ def main(args):
             warning("Generating final output")
 
         # transpose membership and kME files (so samples are columns)
-        iwgcna_io.transpose_file_contents("pre-pruning-membership.txt", 'Gene')
-        iwgcna_io.transpose_file_contents("membership.txt", 'Gene')
-        iwgcna_io.transpose_file_contents("eigengene-connectivity.txt")
+        io.transpose_file_contents("pre-pruning-membership.txt", 'Gene')
+        io.transpose_file_contents("membership.txt", 'Gene')
+        io.transpose_file_contents("eigengene-connectivity.txt")
 
         logger.info('iWGCNA: SUCCESS')
 
@@ -164,9 +167,9 @@ def main(args):
 def initialize(args):
     if args.verbose:
         warning("Initializing workspace")
-
+        
     # initialize R workspace and logs
-    iwgcna_io.create_dir(args.workingDir)
+    io.create_dir(args.workingDir)
     initialize_r_workspace(args.workingDir, args.allowWGCNAThreads)
 
     logger = log.initialize(args.workingDir)
@@ -179,7 +182,7 @@ def initialize(args):
     # gives a weird R error that I'm having trouble catching
     # TODO: identify the exact exception 
     try:
-        data = iwgcna_io.read_data(args.inputFile)
+        data = io.read_data(args.inputFile)
     except:
         logger.error("Unable to open input file: " + args.inputFile)
         sys.exit(1)

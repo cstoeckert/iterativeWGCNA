@@ -1,30 +1,11 @@
 '''
 functions for running iterative WGCNA
 '''
-
 from __future__ import print_function
-import os
-from ..r.imports import base, wgcna, r_utils
-import iwgcna.process.eigengenes as eigengenes
-import iwgcna.process.membership as membership
-import iwgcna.process.kme as kme
-
-def write_gene_counts(iteration, initial, fit):
-    '''
-    writes the number of kept and dropped genes at the end of an iteration
-    '''
-    fileName = 'gene-counts.txt'
-    try:
-        os.stat(fileName)
-    except OSError:
-        header = ('Iteration', 'Initial', 'Fit', 'Residual')
-        with open(fileName, 'a') as f:
-            print('\t'.join(header), file=f)
-    finally:
-        with open(fileName, 'a') as f:
-            print('\t'.join((iteration, str(initial),
-                             str(fit), str(initial - fit))), file=f)
-
+from .r.imports import base, wgcna, r_utils
+import iwgcna.eigengenes as eigengenes
+import iwgcna.membership as membership
+import iwgcna.kme as kme
 
 def set_iteration_label(runId, passId):
     '''

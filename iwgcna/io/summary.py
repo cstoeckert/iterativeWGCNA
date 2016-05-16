@@ -1,3 +1,6 @@
+'''
+progress summary output
+'''
 from __future__ import print_function
 import os
 
@@ -5,7 +8,7 @@ def write_gene_counts(iteration, initial, fit):
     '''
     writes the number of kept and dropped genes at the end of an iteration
     '''
-    fileName = 'iteration-gene-count-summary.txt'
+    fileName = 'gene-counts.txt'
     try:
         os.stat(fileName)
     except OSError:
@@ -16,3 +19,4 @@ def write_gene_counts(iteration, initial, fit):
         with open(fileName, 'a') as f:
             print('\t'.join((iteration, str(initial),
                              str(fit), str(initial - fit))), file=f)
+

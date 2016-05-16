@@ -3,14 +3,14 @@ manage eigengene matrices
 '''
 
 import rpy2.robjects as ro
-from ..utils.io import write_data_frame
-from ..r.imports import base, stats
+from .io.utils import write_data_frame
+from .r.imports import base, stats
 
 def write(ematrix, isFinal):
     '''
     writes the eigengene matrix to file
     '''
-    fileName = 'eigengenes-final.txt' if isFinal else 'eigengenes.txt'   
+    fileName = 'eigengenes-final.txt' if isFinal else 'eigengenes.txt'
     write_data_frame(ematrix, fileName, 'Module')
 
 

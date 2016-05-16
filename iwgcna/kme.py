@@ -5,8 +5,8 @@ calculate and manage eigengene connectivity lists (kME)
 from collections import OrderedDict
 import rpy2.robjects as ro
 from .expression import get_member_expression
-from ..r.imports import wgcna, stats, base
-from ..utils.io import write_data_frame
+from .r.imports import wgcna, stats, base
+from .io.utils import write_data_frame
 
 def initialize(data):
     '''

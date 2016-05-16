@@ -5,13 +5,13 @@ functions for initialing and handling logging
 import logging
 from time import strftime
 import os
-from .io import warning
+from .utils import warning
 
 def initialize(workingDirectory):
     '''
     initialize log by setting path and file format
     '''
-    logging.basicConfig(filename=os.path.join(workingDirectory, 'iwgcna.log'),
+    logging.basicConfig(filename='iwgcna.log',
                         filemode='w', format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
