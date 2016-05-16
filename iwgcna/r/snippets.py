@@ -3,7 +3,7 @@
 uses rpy2 python library to create a namespace for R functions underlying iterativeWGCNA
 """
 
-util_functions = """
+UTIL_FUNCTIONS = """
 
 # convert numeric data frame to real
 numeric2real <- function(df) {
@@ -20,7 +20,7 @@ saveObject <- function(obj, objName, file) {
 # labels columns (samples)
 # cleans up module names (removes the "ME")
 
-eigengenes <- function(iteration, blocks, sampleNames) {
+extractEigengenes <- function(iteration, blocks, sampleNames) {
     eigengenes <- as.data.frame(t(blocks$MEs))
     colnames(eigengenes) <- sampleNames
     eigengenes <- eigengenes[row.names(eigengenes) != "ME0" & row.names(eigengenes) != "MEgrey", ]
@@ -30,7 +30,7 @@ eigengenes <- function(iteration, blocks, sampleNames) {
 
 # given WGCNA blocks and gene names, returns
 # a data frame with modules mapped to gene names
-modules <- function(blocks, geneNames) {
+extractModules <- function(blocks, geneNames) {
     as.data.frame(blocks$colors, row.names = geneNames)
 }
 
@@ -54,4 +54,4 @@ removeUnclassified <- function(expr, membership) {
 """
 
 __author__ = "Emily Greenfest-Allen"
-__copyright__ = "Copyright 2015, University of Pennsylvania"
+__copyright__ = "Copyright 2016, University of Pennsylvania"

@@ -13,3 +13,6 @@ flycheck_iWGCNA.py
 
 .Rhistory
 .#rSnippets.py
+*.py~
+*.org
+todo.org~
