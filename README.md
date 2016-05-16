@@ -4,6 +4,21 @@
 
 iterativeWGCNA provides an extension and python wrapper for the R program [Weighted Gene Co-expressionNetwork  Analysis](https://github.com/cran/WGCNA), or WGCNA, that improves the robustness of network-based classifications (modules) inferred from whole-transcriptome gene expression datasets. 
 
+## Dependencies
+
+iterativeWGCNA has the following dependencies:
+
+### Python
+
+1. [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
+  * will be installed by Python setup tools or package manager if the iwgcna packages is installed
+
+### R language for statistical computing
+
+[R]:(https://cran.r-project.org/) version 3.* must be available on the system and the binary executable in the system PATH
+
+1. [WGCNA Package and Bioconductor dependencies]:https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall
+
 ## Code Example
 
 iterativeWGCNA can be run without installing the iwgcna package by excuting the wrapper script `run_iwgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.
