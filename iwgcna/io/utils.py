@@ -53,7 +53,7 @@ def read_data(fileName):
     return r_utils.numeric2real(data)
 
 
-def transpose_file_contents(fileName):
+def transpose_file_contents(fileName, rowLabel):
     '''
     read in a file to a dataframe, transpose, and output
     use this instead of R transforms b/c R will concatenate
@@ -62,6 +62,10 @@ def transpose_file_contents(fileName):
     with open(fileName, 'r') as f:
         content = [line.rstrip().split() for line in f]
 
+    header = True
     with open(fileName, 'w') as f:
         for line in zip(*content):
+            if header:
+                line[0] = rowLabel
+                header = False
             print('\t'.join(line), file=f)
