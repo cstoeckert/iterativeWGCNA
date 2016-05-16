@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.7
-"""
+'''
 Perform iterative WGCNA analysis
 
 python dependencies:
@@ -9,7 +9,7 @@ R dependencies:
   * igraph
   * WGCNA
   * lattice
-"""
+'''
 
 import logging
 import sys
@@ -120,25 +120,40 @@ def main(args):
 
         # run iterative WGCNA
         membershipMap, kmeMap = iterative_wgcna(data, args)
-        
-        # use kME goodness of fit to reassign module
-        # membership now that all modules are estimated
+
         if args.verbose:
-            warning("Making final goodness of fit assessment")
-            modules = membership.get_modules(membershipMap)
-            logger.info("Found " + str(len(modules)) + " modules.")
-            logger.info(modules)
+            warning("Extracting final eigengenes and merging close modules")
+
+        modules = membership.get_modules(membershipMap)
+        logger.info("Found " + str(len(modules)) + " modules.")
+        logger.info(modules)
 
         # extract final eigengene matrix
         eigengeneMatrix = eigengenes.load_from_file('eigengenes.txt')
         eigengeneMatrix = eigengenes.extract_modules(eigengeneMatrix, modules)
 
-        eigengeneMatrix, membershipMap = membership.merge_similar_modules(eigengeneMatrix, membershipMap)
-        
+        # merge close modules
+        eigengeneMatrix, membershipMap, numMergedModules = \
+          manager.merge_close_modules(eigengeneMatrix, membershipMap,
+                                      args.moduleMergeCutHeight)
+        # and update kME if necessary
+        if numMergedModules is not None:
+            kmeMap = kme.update(kmeMap, data, membershipMap, eigengeneMatrix)
+            modules = membership.get_modules(membershipMap)
+            logger.info("Retained " + str(len(modules)) + " modules after merging.")
+            logger.info(modules)
+
         eigengenes.write(eigengeneMatrix, True)
 
-        reassignedCount, membershipMap, kmeMap = membership.best_fit(membershipMap, eigengeneMatrix, data,
-                                                                     kmeMap, args.wgcnaParameters)
+        # use kME goodness of fit to reassign module
+        # membership now that all modules are estimated
+        if args.verbose:
+            warning("Making final goodness of fit assessment")
+
+        reassignedCount, membershipMap, kmeMap = \
+          membership.best_fit(membershipMap, eigengeneMatrix, data,
+                              kmeMap, args.wgcnaParameters)
+
         logging.info("Reassigned " + str(reassignedCount) + " genes in final kME review.")
         if args.verbose:
             warning("Reassigned " + str(reassignedCount) + " genes in final kME review.")
@@ -170,7 +185,7 @@ def main(args):
 def initialize(args):
     if args.verbose:
         warning("Initializing workspace")
-        
+
     # initialize R workspace and logs
     io.create_dir(args.workingDir)
     initialize_r_workspace(args.workingDir, args.allowWGCNAThreads)

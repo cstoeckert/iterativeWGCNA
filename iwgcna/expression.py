@@ -3,6 +3,7 @@ functions for manipulating expression matrices
 '''
 
 import rpy2.robjects as ro
+
 from .r.imports import r_utils
 
 def get_member_expression(module, expr, membership):

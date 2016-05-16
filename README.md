@@ -2,13 +2,13 @@
 
 ## Synopsis
 
-iterativeWGCNA provides an extension and python wrapper for the R program [Weighted Gene Co-expressionNetwork  Analysis](https://github.com/cran/WGCNA), or WGCNA, that improves the robustness of network-based classifications (modules) inferred from whole-transcriptome gene expression datasets. 
+iterativeWGCNA provides an extension and Python wrapper for the R program [Weighted Gene Co-expressionNetwork  Analysis](https://github.com/cran/WGCNA), or WGCNA, that improves the robustness of network-based classifications (modules) inferred from whole-transcriptome gene expression datasets. 
 
 ## Dependencies
 
 iterativeWGCNA has the following dependencies:
 
-### Python
+### Python (version 2.7+)
 
 1. [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
   * will be installed by Python setup tools or package manager if the iwgcna packages is installed

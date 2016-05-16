@@ -4,6 +4,7 @@ calculate and manage eigengene connectivity lists (kME)
 
 from collections import OrderedDict
 import rpy2.robjects as ro
+
 from .expression import get_member_expression
 from .r.imports import wgcna, stats, base
 from .io.utils import write_data_frame
@@ -35,8 +36,7 @@ def calculate(expr, eigengene, calculateP):
 
 def update(kME, data, membership, eigengenes):
     '''
-    finds new module membership and updates eigengene
-    connectivity (kME)
+    updates eigengene connectivity (kME)
     for each module, extracts the member subset from the
     expression data and calculates the kME between the module
     eigengene and each member

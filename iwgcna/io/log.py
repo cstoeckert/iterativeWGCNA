@@ -26,8 +26,12 @@ def parameters(params):
     '''
     logging.info(strftime("%c"))
     logging.info("Working directory: " + params.workingDir)
+    logging.info("Saving blocks for each iteration? "
+                 + ("TRUE" if params.saveBlocks else "FALSE"))
+    logging.info("Merging final modules if cutHeight <= "
+                 + str(params.moduleMergeCutHeight))
     logging.info("Allowing WGCNA Threads? "
-                + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
+                 + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
     logging.info("Running WGCNA with the following params:")
     logging.info(params.wgcnaParameters)
 

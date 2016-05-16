@@ -5,10 +5,9 @@ manage module membership lists
 import logging
 from collections import OrderedDict
 import rpy2.robjects as ro
+
 from .r.imports import r_utils
 from .io.utils import write_data_frame
-
-# from .eigengenes import equal as eigen_equal
 from . import kme
 
 def initialize(data):
@@ -141,7 +140,7 @@ def best_fit(membership, eigengenes, data, kME, params):
     reassignmentCount = 0
 
     for module in eigengenes.rownames:
-        logging.debug("Evaluating best fits to " + module)
+        logging.info("Evaluating best fits to " + module)
         # calculate kME of all genes to the module eigengene
         moduleEigengene = eigengenes.rx(module, True)
         moduleKME = kme.calculate(data, moduleEigengene, True)
@@ -198,3 +197,4 @@ def get_members(module, membership):
             members.append(gene)
 
     return members
+

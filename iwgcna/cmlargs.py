@@ -1,7 +1,8 @@
-''' 
+'''
 functions for defining, parsing, processing,
 and validating command line arguments
 '''
+
 import argparse
 from os import getcwd
 
@@ -25,6 +26,15 @@ def parameter_list(strValue):
         params[name] = value
 
     return params
+
+def restricted_float(x):
+    '''
+    for argument parsing; restricts float value from 0 to 1
+    '''
+    x = float(x)
+    if x < 0.0 or x > 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
 
 
 def helpEpilog():
@@ -121,6 +131,13 @@ def parse_command_line_args():
     parser.add_argument('--saveBlocks',
                         help="save WGNCA blockwise modules for each iteration",
                         action='store_true')
+
+    parser.add_argument('--moduleMergeCutHeight',
+                        help="cut height (dissimilarity threshold) for"
+                        + " merging close modules after algorithm convergence;"
+                        + " must be in the range (0.0, 1.0]",
+                        default=0.05,
+                        type=restricted_float)
 
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)

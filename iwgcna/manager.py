@@ -2,6 +2,9 @@
 functions for running iterative WGCNA
 '''
 from __future__ import print_function
+
+import logging
+
 from .r.imports import base, wgcna, r_utils
 import iwgcna.eigengenes as eigengenes
 import iwgcna.membership as membership
@@ -25,7 +28,7 @@ def evaluate_fit(kmeMap, membershipMap, genes, minKMEtoStay):
         module = membershipMap[g]
 
         if module == 'UNCLASSIFIED':
-            kmeMap[g] = float('NaN') 
+            kmeMap[g] = float('NaN')
             continue
 
         if kmeMap[g] < minKMEtoStay:
@@ -77,10 +80,52 @@ def run_iteration(iteration, data, membershipMap, kmeMap,
         kme.write(iteration, kmeMap)
 
         # evaluate fit & update membership again, removing small modules
-        membershipMap, kmeMap = evaluate_fit(kmeMap, membershipMap, data.rownames,
-                                             wgcnaParameters['minKMEtoStay'])
-        membershipMap, kmeMap = membership.remove_small_modules(membershipMap, kmeMap,
-                                                                wgcnaParameters['minModuleSize'])
+        membershipMap, kmeMap = \
+          evaluate_fit(kmeMap, membershipMap, data.rownames,
+                       wgcnaParameters['minKMEtoStay'])
+        membershipMap, kmeMap = \
+          membership.remove_small_modules(membershipMap, kmeMap,
+                                          wgcnaParameters['minModuleSize'])
         membership.write(iteration, membershipMap, True)
 
     return membershipMap, kmeMap
+
+
+def merge_close_modules(eigengeneMatrix, membershipMap, cutHeight):
+    '''
+    merge close modules based on similarity between
+    eigengenes
+    '''
+    revisedModules = {}
+    modules = membership.get_modules(membershipMap)
+    for module1 in modules:
+        similarity = eigengenes.similarity(eigengeneMatrix, module1)
+        for module2 in modules:
+            if module1 == module2:
+                continue
+            dissimilarity = round(1.0 - similarity.rx(module2, 1)[0], 2)
+            if dissimilarity <= cutHeight:
+                logging.info("Merging " + module1 + " and "
+                             + module2 + " (D = " + str(dissimilarity) + ")")
+
+                revisedModules[module1] = module2
+                # remove m2 so it is not considered later
+                # on down the line and we don't end up
+                # mapping m1 to m2 as well as m2 to m1
+                modules.remove(module2)
+
+    if len(revisedModules) == 0:
+        logging.info("Merge Close Modules: 0 modules merged.")
+        return eigengeneMatrix, membershipMap, None
+
+    for gene in membershipMap:
+        module = membershipMap[gene]
+        if module in revisedModules:
+            membershipMap[gene] = revisedModules[module]
+
+    newEigengenes = eigengenes.extract_modules(eigengeneMatrix,
+                                               membership.get_modules(membershipMap))
+    numMergedModules = eigengeneMatrix.nrow - newEigengenes.nrow
+    logging.info("Merge Close Module: " + str(numMergedModules) + " modules merged.")
+
+    return newEigengenes, membershipMap, numMergedModules

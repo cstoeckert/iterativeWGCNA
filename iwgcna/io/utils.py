@@ -66,6 +66,9 @@ def transpose_file_contents(fileName, rowLabel):
     with open(fileName, 'w') as f:
         for line in zip(*content):
             if header:
+                line = list(line)
                 line[0] = rowLabel
+                line = tuple(line)
                 header = False
+                
             print('\t'.join(line), file=f)
