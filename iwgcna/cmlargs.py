@@ -18,9 +18,6 @@ def parameter_list(strValue):
     for p in pairs:
         name, value = p.split('=')
 
-        print("'", name, "'")
-        print("'", value, "'")
-
         if value in ['TRUE', 'T', 'True', 't']:
             value = True
         if value in ['FALSE', 'F', 'False', 'f']:
