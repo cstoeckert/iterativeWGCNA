@@ -3,6 +3,7 @@ functions for defining, parsing, processing,
 and validating command line arguments
 '''
 
+import re
 import argparse
 from os import getcwd
 
@@ -23,7 +24,14 @@ def parameter_list(strValue):
         if value in ['FALSE', 'F', 'False', 'f']:
             value = False
 
-        params[name] = value
+        # Test and cast for integer
+        if value.isdigit():
+            params[name] = int(value)
+        # Test and cast for float
+        elif re.match("^\d+?\.\d+?$", value):
+            params[name] = float(value)
+        else:
+            params[name] = value
 
     return params
 
@@ -62,7 +70,7 @@ WGCNA Parameters
 iWGCNA can accept any parameter valid for the WGCNA
 blockwiseModules function.  
 
-See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
+See c
 
 To specify these parameters use the --wgcnaParameters flag followed by
 a comma separated list of parameter=value pairs.  For example:
