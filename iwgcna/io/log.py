@@ -31,14 +31,14 @@ def parameters(params):
     logging.info("Merging final modules if cutHeight <= "
                  + str(params.moduleMergeCutHeight))
     logging.info("Allowing WGCNA Threads? "
-                 + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
+                 + ("TRUE" if params.enableWGCNAThreads else "FALSE"))
     logging.info("Running WGCNA with the following params:")
     logging.info(params.wgcnaParameters)
 
     if params.verbose:
         warning("Working directory: " + params.workingDir)
         warning("Allowing WGCNA Threads? "
-                + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
+                + ("TRUE" if params.enableWGCNAThreads else "FALSE"))
         warning("Running WGCNA with the following params:")
         warning(params.wgcnaParameters)
 

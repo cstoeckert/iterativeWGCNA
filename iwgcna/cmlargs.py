@@ -18,6 +18,9 @@ def parameter_list(strValue):
     for p in pairs:
         name, value = p.split('=')
 
+        print("'", name, "'")
+        print("'", value, "'")
+
         if value in ['TRUE', 'T', 'True', 't']:
             value = True
         if value in ['FALSE', 'F', 'False', 'f']:
@@ -124,7 +127,7 @@ def parse_command_line_args():
                         + "see WGCNA manual & more info below",
                         type=parameter_list)
 
-    parser.add_argument('--allowWGCNAThreads',
+    parser.add_argument('--enableWGCNAThreads',
                         help="allow WGCNA to use threading;\nsee WGCNA manual",
                         action='store_true')
 

@@ -188,7 +188,7 @@ def initialize(args):
 
     # initialize R workspace and logs
     io.create_dir(args.workingDir)
-    initialize_r_workspace(args.workingDir, args.allowWGCNAThreads)
+    initialize_r_workspace(args.workingDir, args.enableWGCNAThreads)
 
     logger = log.initialize(args.workingDir)
     log.parameters(args)
