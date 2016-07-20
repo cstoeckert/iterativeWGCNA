@@ -70,12 +70,12 @@ WGCNA Parameters
 iWGCNA can accept any parameter valid for the WGCNA
 blockwiseModules function.  
 
-See c
+See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
 
 To specify these parameters use the --wgcnaParameters flag followed by
 a comma separated list of parameter=value pairs.  For example:
 
---wgcnaParameters maxBlockSize = 5000,corType=bicor,power=10
+--wgcnaParameters maxBlockSize=5000,corType=bicor,power=10
 
 sets the maximum block size to 5000 genes,
 the correlation type to the biweight correlation,
