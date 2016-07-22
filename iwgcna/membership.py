@@ -8,29 +8,30 @@ import rpy2.robjects as ro
 
 from .r.imports import r_utils
 from .io.utils import write_data_frame
-from . import kme
 
-
-class Membership(object):
-    ''' track module membership for the sequence features in the expression dataset'''
+class MembershipList(object):
+    '''
+    track module membership for the sequence
+    features in the expression dataset
+    '''
 
     def __init__(self, features):
         '''
         initialize an OrderedDict with one entry per feature
         all features are initially unclassified
         '''
-        self.classification = OrderedDict((f, 'UNCLASSIFIED') for f in features)
+        self.values = OrderedDict((f, 'UNCLASSIFIED') for f in features)
         self.size = len(features)
         self.iteration = None
         return None
 
     def __update(self, feature, module):
         '''
-        update classification of 'feature' to 'module'
+        update values of 'feature' to 'module'
         do not add new features
         '''
-        if feature in self.classification:
-            self.classification[feature] = module
+        if feature in self.values:
+            self.values[feature] = module
             return True
         else:
             return False
@@ -43,7 +44,7 @@ class Membership(object):
     def update(self, features, blocks):
         '''
         compares new module membership assignments to
-        prexisting ones; updates classification
+        prexisting ones; updates values
         '''
         modules = r_utils.extractModules(blocks, features)
         # if the feature is in the subset
@@ -65,22 +66,19 @@ class Membership(object):
     def write(self, isPruned):
         '''
         writes the membership dictionary to file
-        :param iteration    iWGCNA iteratoin
-        :param membership   gene->module mapping
-        :param initialClassificaton    boolean flag indicating whether pruning has been done
         '''
-        df = ro.DataFrame(self.classification)
+        df = ro.DataFrame(self.values)
         df.rownames = (self.iteration)
         fileName = 'membership.txt' if isPruned else 'pre-pruning-membership.txt'
         write_data_frame(df, fileName, 'Iteration')
 
         return None
 
-    def getClassification(self, feature):
+    def getValues(self, feature):
         '''
         returns the assigned module for a feature
         '''
-        return self.classification[feature]
+        return self.values[feature]
 
     def count_module_members(self, features=None):
         '''
@@ -90,11 +88,11 @@ class Membership(object):
         the specified feature list
         '''
         if features is None:
-            features = list(self.classification.keys())
+            features = list(self.values.keys())
 
         count = {}
         for feature in features:
-            module = self.getClassification(feature)
+            module = self.getValues(feature)
         if module in count:
             count[module] = count[module] + 1
         else:
@@ -107,7 +105,7 @@ class Membership(object):
         returns true if the feature is classified
         '''
 
-        return self.getClassification(feature) != 'UNCLASSIFIED'
+        return self.getValues(feature) != 'UNCLASSIFIED'
 
     def count_classified_features(self, features=None):
         '''
@@ -117,7 +115,7 @@ class Membership(object):
         '''
         count = 0
         if features is None:
-            features = list(self.classification.keys())
+            features = list(self.values.keys())
         for feature in features:
             if self.isClassified(feature):
                 count = count + 1
@@ -142,7 +140,7 @@ class Membership(object):
         '''
         memberCount = self.count_module_members()
 
-        for feature, module in self.classification.items():
+        for feature, module in self.values.items():
             if memberCount[module] < minModuleSize:
                 self.__update(feature, 'UNCLASSIFIED')
                 kME[feature] = float('NaN')
@@ -156,7 +154,7 @@ class Membership(object):
         gets list of modules in  membership assignments
         '''
         modules = {}
-        for module in self.classification.values():
+        for module in self.values.values():
             if module != "UNCLASSIFIED":
                 modules[module] = 1
 
@@ -168,7 +166,7 @@ class Membership(object):
         get list of features in specified module
         '''
         members = []
-        for feature, module in self.classification.items():
+        for feature, module in self.values.items():
             if module == target:
                 members.append(feature)
 

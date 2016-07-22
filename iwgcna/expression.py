@@ -4,33 +4,36 @@ functions for manipulating expression matrices
 
 import rpy2.robjects as ro
 
-from .r.imports import r_utils
+class Expresson(object):
+    def __init__(self, data):
+        self.data = data
+        self.size = len(self.data)
+        return None
 
-def get_member_expression(module, expr, membership):
-    '''
-    subsets expression data
-    returning expression for only members of the specified module
-    '''
-    return r_utils.extractMembers(module, expr, ro.ListVector(membership))
+    def get_feature_expression(self, features):
+        '''
+        subsets expression data
+        returning expression for list of features
+        '''
+        return self.data.rx(ro.StrVector(features), True)
 
+    def get_residual_expression(self, unclassifiedFeatures):
+        '''
+        subsets expression data
+        returning expression for only residuals to the fit
+        '''
+        if unclassifiedFeatures is None:
+            return None
+        else:
+            return self.get_feature_expression(unclassifiedFeatures)
 
-def get_residuals(expr, membership):
-    '''
-    subsets expression data
-    returning expression for only residuals to the fit
-    '''
-    if membership is None:
-        return expr
-    else:
-        return get_member_expression('UNCLASSIFIED', expr, membership)
-
-
-def remove_residuals(expr, membership):
-    '''
-    subsets expression data
-    removing residuals to the fit
-    '''
-    if membership is None:
-        return expr
-    else:
-        return r_utils.removeUnclassified(expr, ro.ListVector(membership))
+    def get_fit_expression(self, fitFeatures):
+        '''
+        subsets expression data
+        return only features that passed the
+        goodness of fit assessment
+        '''
+        if fitFeatures is None:
+            return None
+        else:
+            return self.get_feature_expression(fitFeatures)

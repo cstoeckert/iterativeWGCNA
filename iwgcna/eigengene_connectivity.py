@@ -12,29 +12,29 @@ from .io.utils import write_data_frame
 class EigeneneConnectivityList(object):
     ''' 
     track, calculate, and manage eigengene 
-    connectivity for sequence features
+    connectivity (Kme) for sequence features
     '''
 
     def __init__(self, features):
         '''
         initialize an OrderedDict with one entry per feature
-        all features have initial kme of NaN
+        all features have initial Kme of NaN
         '''
-def initialize(data):
-    '''
-    initialized eigengene connectivity (kME)
-    dictionary
-    gene list comes from input data row names (DATA.rownames)
-    all kMEs are initially NaN
-    an ordered dictionary is used to keep values in the same
-    order as input data
-    '''
-    kME = OrderedDict((gene, float('NaN')) for gene in data.rownames)
-    return kME
+        self.values = OrderedDict((f, float('NaN')) for f in features)
+        self.size = len(features)
+        self.iteration = None
+        return None
 
-
-def calculate(expr, eigengene, calculateP):
-  
+    def calculate_kme(self, expr, eigengene, calculateP):
+        '''
+        calculates eigengene connectivity
+        between an eigengene and expression data set
+        '''
+        if calculateP:
+            correlation = wgcna().corAndPvalue(base().t(expr), base().t(eigengene))
+        else:
+            correlation = base().as_data_frame(stats().cor(base().t(expr), base().t(eigengene)))
+            return correlation
 
 
 def update(kME, data, membership, eigengenes):
