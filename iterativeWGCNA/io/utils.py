@@ -7,7 +7,7 @@ from __future__ import with_statement
 from sys import stderr
 import os
 import rpy2.robjects as ro
-from ..r.imports import r_utils
+from ..r.imports import rsnippets
 
 def warning(*objs):
     '''
@@ -50,7 +50,7 @@ def read_data(fileName):
     and convert numeric (integer) data to real
     '''
     data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
-    return r_utils.numeric2real(data)
+    return rsnippets.numeric2real(data)
 
 
 def transpose_file_contents(fileName, rowLabel):

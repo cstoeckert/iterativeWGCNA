@@ -30,7 +30,8 @@ class Genes(object):
         '''
         self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
-        self.genes = OrderedDict((geneId, {}) for geneId in self.profiles.genes())
+        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN')}) for geneId in self.profiles.genes())
+
         self.size = len(self.genes)
         self.iteration = None
 
@@ -234,5 +235,3 @@ class Genes(object):
         '''
         membership = self.__extract_modules()
         return [gene for gene, module in membership.items() if module == targetModule]
-
-    
