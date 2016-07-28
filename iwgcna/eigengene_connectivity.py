@@ -6,6 +6,7 @@ from collections import OrderedDict
 import rpy2.robjects as ro
 
 from .expression import get_member_expression
+
 from .r.imports import wgcna, stats, base
 from .io.utils import write_data_frame
 

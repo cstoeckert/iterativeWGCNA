@@ -11,7 +11,7 @@ from collections import Counter
 import rpy2.robjects as ro
 
 # from .expression import Expression
-from .gene_properties import GeneProperties
+from .analysis import calculate_kME
 from .r.imports import wgcna, stats, base, rsnippets
 from .io.utils import write_data_frame
 
@@ -28,6 +28,7 @@ class Genes(object):
         from the row.names of the expression
         data set
         '''
+        self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
         self.genes = OrderedDict((geneId, {}) for geneId in self.profiles.genes())
         self.size = len(self.genes)
@@ -120,19 +121,27 @@ class Genes(object):
         else:
             return False
 
-        
+
     def update_module_kME(self, module):
         '''
         update member gene eigengene connectivity (kME)
         for specified module (module is an object
         containing module name and eigengene)
         '''
-        members = self.get_module_members(
-        memberKME = self.__calculate_member_kME(expression, module.eigengene, False)
-        for gene in module.feature:
-            self.__update(round(memberKME.rx(feature, 1)[0],2))
 
-            
+        members = self.get_module_members(module.name)
+        memberKME = calculate_kME(self.profiles.get_expression(members),
+                                  module.eigengene, False)
+
+        self.logger.debug("updating module kme")
+        self.logger.debug("Module Name:" +  module.name)
+        self.logger.debug("Module members: " + members)
+        self.logger.debug(memberKME)
+
+        for gene in memberKME.rownames:
+            self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
+
+
     def __write_kME(self):
         '''
         writes eigengene connectivity (kME)
