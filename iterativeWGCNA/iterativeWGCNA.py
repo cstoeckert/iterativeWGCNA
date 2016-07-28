@@ -23,15 +23,40 @@ class iterativeWGCNA(object):
 
     def __init__(self, exprData, args):
         self.logger = logging.getLogger('iterativeWGCNA')
-        # genes
-        self.genes = Genes(exprData)
-        self.modules = {}
-        self.iteration = None
+        self.profiles = exprData
         self.args = args
+        self.profiles = None
 
-        # initialize R workspace and logs
-        io.create_dir(args.workingDir)
-        initialize_r_workspace(args.workingDir, args.allowWGCNAThreads)
+        # create working directory
+        io.create_dir(self.args.workingDir)
 
+        self.__initialize_R()
+
+        # initalize logger
         logger = log.initialize(args.workingDir)
+
         log.parameters(args)
+        if args.verbose:
+            log.parameters(args)
+
+
+    def load_expression_profiles(self):
+          # gives a weird R error that I'm having trouble catching
+          # when it fails
+        # TODO: identify the exact exception 
+        try:
+            data = io.read_data(args.inputFile)
+        except:
+            logger.error("Unable to open input file: " + args.inputFile)
+            sys.exit(1)
+
+        log.input_data(args.inputFile, data.ncol, data.nrow)
+        
+            
+        
+    def __initialize_R(self):
+        '''
+        initialize R workspace and logs
+        '''
+        
+        initialize_r_workspace(self.args.workingDir, self.args.allowWGCNAThreads)

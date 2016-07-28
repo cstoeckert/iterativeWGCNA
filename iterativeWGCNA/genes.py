@@ -62,7 +62,7 @@ class Genes(object):
             return False
 
 
-    def update_modules(self, genes, blocks):
+    def update_membership(self, genes, blocks):
         '''
         fetches new module membership from WGCNA
         blocks and updates relevant genes
@@ -85,12 +85,27 @@ class Genes(object):
         return None
 
 
+    def copy_membership(self, source):
+        '''
+        updates membership from another Genes object
+        '''
+        sourceMembership = source.get_gene_membership()
+        for gene, module in sourceMembership.items():
+            self.__update_module(gene, module)
+        
+    
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
         '''
         return OrderedDict((gene, membership['module']) for gene, membership in self.genes.items())
 
+
+    def get_gene_membership(self):
+        '''
+        public facing method for getting gene membership
+        '''
+        return self.__extract_modules()
 
     def __extract_kME(self):
         '''
@@ -123,7 +138,7 @@ class Genes(object):
             return False
 
 
-    def update_module_kME(self, module):
+    def __update_module_kME(self, module):
         '''
         update member gene eigengene connectivity (kME)
         for specified module (module is an object
@@ -142,6 +157,10 @@ class Genes(object):
         for gene in memberKME.rownames:
             self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
 
+    def update_kME(self):
+        modules = self.get_modules()
+        for m in modules:
+            self.__update_module_kME(m)
 
     def __write_kME(self):
         '''
@@ -194,6 +213,32 @@ class Genes(object):
         return len(classified)
 
 
+    def get_classified_gene_profiles(self):
+        '''
+        get classified gene profiles
+        '''
+        membership = self.__extract_modules()
+        classifiedGenes = [gene for gene, module in membership.items() if module != 'UNCLASSIFIED']
+        return self.profiles.get_expression(classifiedGenes)
+
+
+    def get_unclassified_gene_profiles(self):
+        '''
+        get unclassified gene profiles
+        '''
+        membership = self.__extract_modules()
+        unclassifiedGenes = [gene for gene, module in membership.items() if module == 'UNCLASSIFIED']
+        return self.profiles.get_expression(unclassifiedGenes)
+
+
+    def get_gene_expression(self, genes):
+        '''
+        get expression profiles for specified
+        list of genes
+        '''
+        return self.profiles.get_expression(genes)
+
+    
     def count_modules(self, genes=None):
         '''
         counts the number of modules (excluding unclassified)

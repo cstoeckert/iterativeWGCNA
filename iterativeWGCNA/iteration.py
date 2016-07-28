@@ -23,6 +23,7 @@ class Iteration(object):
         self.logger = logging.getLogger('iterativeWGCNA')
         # genes
         self.genes = Genes(exprData)
+        self.
         self.modules = {}
         self.iteration = None
         self.args = args

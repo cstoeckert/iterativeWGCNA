@@ -37,3 +37,9 @@ class Expresson(object):
             return None
         else:
             return self.get_feature_expression(fitFeatures)
+
+
+    def read_data(fileName):
+        '''
+        reads the data from a file
+        '''
