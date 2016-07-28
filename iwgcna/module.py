@@ -17,12 +17,6 @@ class Module(object):
         self.eigengene = None
         self.kme = None
 
-    def get_expression(self):
-        return self.expression
-
-    def set_eigengene(self, eigengene):
-        self.eigengene = eigengene
-        
     def calculate_kme(self, calculateP):
         '''
         calculates eigengene connectivity kme

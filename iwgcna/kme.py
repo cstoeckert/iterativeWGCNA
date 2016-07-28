@@ -20,39 +20,39 @@ class EigeneneConnectivityList(object):
         initialize an OrderedDict with one entry per feature
         all features have initial kme of NaN
         '''
-def initialize(data):
-    '''
-    initialized eigengene connectivity (kME)
-    dictionary
-    gene list comes from input data row names (DATA.rownames)
-    all kMEs are initially NaN
-    an ordered dictionary is used to keep values in the same
-    order as input data
-    '''
-    kME = OrderedDict((gene, float('NaN')) for gene in data.rownames)
-    return kME
+        self.values = OrderedDict((f, float('NaN')) for f in features)
+        self.size = len(features)
+        self.iteration = None
+        return None
 
+    def __update(self, feature, kME):
+        '''
+        update value of 'feature' to kme
+        do not add new featuers
+        '''
+        if feature in self.values:
+            self.values = kME
+            return True
+        else:
+            return False
+        
 
-def calculate(expr, eigengene, calculateP):
-  
+    # TODO def calculate(expr, eigengene, calculateP):
+    def __calculate(epression, eigengene, calculateP):
+        
+    
+    def update(self, module):
+        '''
+        updates feature eigengene connectivity by calculating 
+        the kME between the module eigengene and member 
+        expression profiles
 
+        :param module: a module object, containing the features, eigengene, etc.
+        '''
 
-def update(kME, data, membership, eigengenes):
-    '''
-    updates eigengene connectivity (kME)
-    for each module, extracts the member subset from the
-    expression data and calculates the kME between the module
-    eigengene and each member
-    '''
-
-    for module in eigengenes.rownames:
-        moduleEigengene = eigengenes.rx(module, True)
-        moduleMemberExpression = get_member_expression(module, data, membership)
-        memberKME = calculate(moduleMemberExpression, moduleEigengene, False)
-        for gene in memberKME.rownames:
-            kME[gene] = round(memberKME.rx(gene, 1)[0], 2)
-
-    return kME
+        memberKME = self.__calculate(module.expression, module.eigengene, False)
+        for feature in module.feature
+            self.__update(round(memberKME.rx(feature, 1)[0],2))
 
 
 def write(iteration, kME):
