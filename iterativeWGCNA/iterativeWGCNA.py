@@ -20,7 +20,6 @@ from .expression import Expression
 from .eigengenes import Eigengenes
 from .wgcna import WgcnaManager
 from .io.utils import create_dir, read_data, warning, transpose_file_contents
-from .r.utils import initialize_r_workspace
 from .r.imports import base, wgcna, rsnippets
 
 
@@ -266,7 +265,18 @@ class IterativeWGCNA(object):
         '''
         initialize R workspace and logs
         '''
-        initialize_r_workspace(self.args.workingDir, self.args.enableWGCNAThreads)
+        # set working directory
+        base().setwd(self.args.workingDir)
+
+        # suppress warnings
+        ro.r['options'](warn=-1)
+
+        # r log
+        rLogger = base().file('iterativeWGCNA-R.log', open='wt')
+        base().sink(rLogger, type=base().c('output', 'message'))
+
+        if self.args.enableWGCNAThreads:
+            wgcna().enableWGCNAThreads()
 
 
     def __initialize_log(self):
