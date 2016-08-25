@@ -24,7 +24,7 @@ def initialize_r_workspace(workingDir, allowThreads):
     base().sink(rLogger, type=base().c('output', 'message'))
 
     if allowThreads:
-        wgcna().allowWGCNAThreads()
+        wgcna().enableWGCNAThreads()
 
 
 def barplot(valueMap, fileName):

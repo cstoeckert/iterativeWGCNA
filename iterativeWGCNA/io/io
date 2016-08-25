@@ -1,8 +1,0 @@
-  /Volumes/PikaiaFTP/Magnuson_U01/iWGCNA/iterativeWGCNA/iterativeWGCNA/io:
-  total used in directory 32 available 98985550
-  drwxr-xr-x   7 allenem  staff   238 Jul 28 11:02 .
-  drwxr-xr-x  13 allenem  staff   442 Jul 28 11:15 ..
-  -rw-r--r--   1 allenem  staff     0 Jul 28 10:24 __init__.py
-  -rw-r--r--   1 allenem  staff  2151 Jul 28 10:24 log.py
-  -rw-r--r--   1 allenem  staff   629 Jul 28 10:24 summary.py
-  -rw-r--r--   1 allenem  staff  1869 Jul 28 10:25 utils.py

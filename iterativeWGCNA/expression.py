@@ -15,11 +15,33 @@ class Expression(object):
         self.size = len(self.profiles)
         return None
 
+
     def genes(self):
         '''
         return genes (row names)
         '''
         return self.profiles.rownames
+
+
+    def nrow(self):
+        ''' 
+        return number of rows
+        '''
+        return self.profiles.nrow
+
+
+    def ncol(self):
+        '''
+        return number of columns
+        '''
+        return self.profiles.ncol
+
+
+    def samples(self):
+        '''
+        return column names (samples)
+        '''
+        return self.profiles.colnames
 
     def gene_expression(self, genes):
         '''
@@ -27,6 +49,7 @@ class Expression(object):
         returning expression for list of genes
         '''
         return self.profiles.rx(ro.StrVector(genes), True)
+
 
     def residual_expression(self, unclassifiedGenes):
         '''
@@ -37,6 +60,7 @@ class Expression(object):
             return None
         else:
             return self.gene_expression(unclassifiedGenes)
+
 
     def fit_expression(self, fitGenes):
         '''

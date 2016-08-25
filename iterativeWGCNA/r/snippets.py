@@ -10,6 +10,11 @@ numeric2real <- function(df) {
      df * 1.0
 }
 
+# return 1-matrix
+dissMatrix <- function(df) {
+    1.0 - df
+}
+
 # wrapper for save object b/c doesn't seem to work with rpy2
 saveObject <- function(obj, objName, file) {
    assign(objName, obj)

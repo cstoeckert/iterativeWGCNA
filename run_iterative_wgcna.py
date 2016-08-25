@@ -1,17 +1,10 @@
 #!/usr/bin/env python2.7
-"""
-Perform iterative WGCNA analysis
 
-python dependencies:
-  * rpy2
-  * matplotlib
+'''Convenience wrapper for running wgcna directly from source tree.'''
 
-R dependencies:
-  * WGCNA
-"""
 
-from .cmlargs import parse_command_line_args
-from .iterativeWGCNA import IterativeWGCNA
+from iterativeWGCNA.cmlargs import parse_command_line_args
+from iterativeWGCNA.iterativeWGCNA import IterativeWGCNA
 
 if __name__ == '__main__':
     args = parse_command_line_args()

@@ -2,7 +2,7 @@
 # pylint: disable=unused-import
 # pylint: disable=bare-except
 # pylint: disable=broad-except
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instances-attributes
 '''
 main application
 '''
@@ -30,22 +30,23 @@ class IterativeWGCNA(object):
     '''
 
     def __init__(self, args):
-        self.args = args
-        create_dir(self.args.workingDir)
-        
         self.__initialize_log()
         self.logger.info(strftime("%c"))
 
         self.profiles = None
         self.genes = None
         self.eigengenes = Eigengenes()
-      
+        self.args = args
+
         self.passCount = 1
         self.iterationCount = 1
         self.iteration = None # unique label for iteration
 
         self.algorithmConverged = False
         self.passConverged = False
+
+        # create working directory
+        create_dir(self.args.workingDir)
 
         self.__initialize_R()
         self.__log_parameters()
@@ -71,7 +72,6 @@ class IterativeWGCNA(object):
 
             moduleCount = self.genes.count_modules(iterationGenes)
             classifiedGeneCount = self.genes.count_classified_genes(iterationGenes)
-            
             self.write_gene_counts(len(iterationGenes), classifiedGeneCount)
 
             # if there are no residuals
@@ -139,7 +139,6 @@ class IterativeWGCNA(object):
 
         try:
             self.run_iterative_wgcna()
-            self.logger.info('iterativeWGCNA: SUCCESS')
         except Exception:
             if self.logger is not None:
                 self.logger.exception('iterativeWGCNA: FAIL')
@@ -147,6 +146,7 @@ class IterativeWGCNA(object):
                 raise
         finally:
             if self.logger is not None:
+                self.logger.info('iterativeWGCNA: SUCCESS')
                 self.logger.info(strftime("%c"))
 
 
@@ -214,14 +214,13 @@ class IterativeWGCNA(object):
 
         blocks = self.run_blockwise_wgcna(iterationProfiles)
         if self.args.saveBlocks:
-            rsnippets.saveObject(blocks, 'blocks', 'blocks-' + self.iteration + '.RData')
+            rsnippets.saveBlocks(blocks, 'blocks', 'blocks-' + self.iteration + '.RData')
 
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
         # fitness and update gene module membership
-        self.eigengenes.extract_from_blocks(self.iteration, blocks, self.profiles.samples())
-
-        if not self.eigengenes.is_empty():
+        self.eigengenes.extract_from_blocks(self.iteration, blocks, self.profiles.samples)
+        if not self.eigengenes.is_empty:
             self.eigengenes.write(False)
 
             # extract membership from blocks and calc eigengene connectivity
@@ -266,14 +265,14 @@ class IterativeWGCNA(object):
         '''
         initialize R workspace and logs
         '''
-        initialize_r_workspace(self.args.workingDir, self.args.enableWGCNAThreads)
+        initialize_r_workspace(self.args.workingDir, self.args.allowWGCNAThreads)
 
 
     def __initialize_log(self):
         '''
         initialize log by setting path and file format
         '''
-        logging.basicConfig(filename=self.args.workingDir + '/iterativeWGCNA.log',
+        logging.basicConfig(filename='iterativeWGCNA.log',
                             filemode='w', format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
@@ -297,23 +296,24 @@ class IterativeWGCNA(object):
         log WGCNA parameter choices and working
         directory name
         '''
-      
-        self.logger.info("Working directory: " + self.args.workingDir)
+        params = self.args.wgcnaParameters
+
+        self.logger.info("Working directory: " + params.workingDir)
         self.logger.info("Saving blocks for each iteration? "
-                         + ("TRUE" if self.args.saveBlocks else "FALSE"))
+                         + ("TRUE" if params.saveBlocks else "FALSE"))
         self.logger.info("Merging final modules if cutHeight <= "
-                         + str(self.args.moduleMergeCutHeight))
+                         + str(params.moduleMergeCutHeight))
         self.logger.info("Allowing WGCNA Threads? "
-                         + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
+                         + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
         self.logger.info("Running WGCNA with the following params:")
-        self.logger.info(self.args.wgcnaParameters)
+        self.logger.info(params.wgcnaParameters)
 
         if self.args.verbose:
-            warning("Working directory: " + self.args.workingDir)
+            warning("Working directory: " + params.workingDir)
             warning("Allowing WGCNA Threads? "
-                    + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
+                    + ("TRUE" if params.allowWGCNAThreads else "FALSE"))
             warning("Running WGCNA with the following params:")
-            warning(self.args.wgcnaParameters)
+            warning(params.wgcnaParameters)
 
 
     def __log_input_data(self):
@@ -321,12 +321,12 @@ class IterativeWGCNA(object):
         log input details
         '''
         self.logger.info("Loaded file: " + self.args.inputFile)
-        self.logger.info(str(self.profiles.ncol()) + " Samples")
-        self.logger.info(str(self.profiles.nrow()) + " Genes")
+        self.logger.info(str(self.profiles.nrow()) + " Samples")
+        self.logger.info(str(self.profiles.ncol()) + " Genes")
         if self.args.verbose:
             warning("Loaded file: " + self.args.inputFile)
-            warning(str(self.profiles.ncol()) + " Samples")
-            warning(str(self.profiles.nrow()) + " Genes")
+            warning(str(self.profiles.nrow()) + " Samples")
+            warning(str(self.profiles.ncol()) + " Genes")
 
 
     def __log_pass_completion(self):
@@ -334,7 +334,7 @@ class IterativeWGCNA(object):
         summarize pass in log when convergence condition is met
         '''
         message = "Pass " + str(self.passCount) + " converged on iteration " \
-                  + str(self.iterationCount) + "."
+                  + self.iterationCount + "."
         self.logger.info(message)
         if self.args.verbose:
             warning(message)

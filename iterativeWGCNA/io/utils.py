@@ -44,6 +44,7 @@ def write_data_frame(df, fileName, rowLabel):
     finally:
         df.to_csvfile(fileName, quote=False, sep='\t', col_names=False, append=True)
 
+
 def read_data(fileName):
     '''
     read gene expression data into a data frame

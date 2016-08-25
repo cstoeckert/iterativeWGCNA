@@ -12,6 +12,7 @@ import rpy2.robjects as ro
 
 # from .expression import Expression
 from .analysis import calculate_kME
+from .eigengenes import Eigengenes
 from .r.imports import wgcna, stats, base, rsnippets
 from .io.utils import write_data_frame
 
@@ -67,7 +68,7 @@ class Genes(object):
         fetches new module membership from WGCNA
         blocks and updates relevant genes
         '''
-        modules = rsnippets.extractModules(blocks, genes)
+        modules = rsnippets.extractModules(blocks, ro.StrVector(genes))
         # if the feature is in the subset
         # update, otherwise leave as is
         for gene in genes:
@@ -92,8 +93,8 @@ class Genes(object):
         sourceMembership = source.get_gene_membership()
         for gene, module in sourceMembership.items():
             self.__update_module(gene, module)
-        
-    
+
+
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
@@ -107,6 +108,14 @@ class Genes(object):
         '''
         return self.__extract_modules()
 
+
+    def get_kME(self, gene):
+        '''
+        returns the assigned kME for a gene
+        '''
+        return self.genes[gene]['kME']
+
+ 
     def __extract_kME(self):
         '''
         extract eigengene connectivity (kME)
@@ -138,29 +147,32 @@ class Genes(object):
             return False
 
 
-    def __update_module_kME(self, module):
+    def __update_module_kME(self, module, eigengene):
         '''
         update member gene eigengene connectivity (kME)
-        for specified module (module is an object
-        containing module name and eigengene)
+        for specified module and eigengene
         '''
 
-        members = self.get_module_members(module.name)
-        memberKME = calculate_kME(self.profiles.get_expression(members),
-                                  module.eigengene, False)
-
-        self.logger.debug("updating module kme")
-        self.logger.debug("Module Name:" +  module.name)
-        self.logger.debug("Module members: " + members)
-        self.logger.debug(memberKME)
+        members = self.get_module_members(module)
+        memberKME = calculate_kME(self.profiles.gene_expression(members),
+                                  eigengene, False)
+        
+        # self.logger.debug("Updating module kME")
+        # self.logger.debug("Module Name:" +  module)
+        # self.logger.debug("Module members: ")
+        # self.logger.debug(members)
+        # self.logger.debug(memberKME)
 
         for gene in memberKME.rownames:
             self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
 
-    def update_kME(self):
+
+    def update_kME(self, eigengenes):
         modules = self.get_modules()
         for m in modules:
-            self.__update_module_kME(m)
+            moduleEigengene = eigengenes.get_module_eigengene(m)
+            self.__update_module_kME(m, moduleEigengene)
+
 
     def __write_kME(self):
         '''
@@ -218,17 +230,43 @@ class Genes(object):
         get classified gene profiles
         '''
         membership = self.__extract_modules()
-        classifiedGenes = [gene for gene, module in membership.items() if module != 'UNCLASSIFIED']
+        classifiedGenes = [gene for gene, module in membership.items()
+                           if module != 'UNCLASSIFIED']
         return self.profiles.get_expression(classifiedGenes)
+
+
+    def get_classified_genes(self, genes=None):
+        '''
+        gets the list of classifed genes
+        if a list of genes is provided, only returns
+        genes within the specified list
+        '''
+        membership = self.__extract_modules()
+        if genes is not None:
+            membership = {gene:module for gene, module in membership.items()
+                          if gene in genes}
+        classifiedGenes = [gene for gene, module in membership.items()
+                           if module != 'UNCLASSIFIED']
+
+        return classifiedGenes
 
 
     def get_unclassified_gene_profiles(self):
         '''
         get unclassified gene profiles
         '''
-        membership = self.__extract_modules()
-        unclassifiedGenes = [gene for gene, module in membership.items() if module == 'UNCLASSIFIED']
+        unclassifiedGenes = self.get_unclassified_genes()
         return self.profiles.get_expression(unclassifiedGenes)
+
+
+    def get_unclassified_genes(self):
+        '''
+        get unclassified genes
+        '''
+        membership = self.__extract_modules()
+        unclassifiedGenes = [gene for gene, module in membership.items()
+                             if module == 'UNCLASSIFIED']
+        return unclassifiedGenes
 
 
     def get_gene_expression(self, genes):
@@ -258,10 +296,11 @@ class Genes(object):
         '''
         memberCount = self.count_module_members()
 
-        for gene, module in self.genes.items():
-            if memberCount[module] < minModuleSize:
-                self.__update_module(gene, 'UNCLASSIFIED')
-                self.__update_kME(gene, float('NaN'))
+        for g in self.genes:
+            geneModule = self.get_module(g)
+            if memberCount[geneModule] < minModuleSize:
+                self.__update_module(g, 'UNCLASSIFIED')
+                self.__update_kME(g, float('NaN'))
 
 
     def get_modules(self):
@@ -280,3 +319,108 @@ class Genes(object):
         '''
         membership = self.__extract_modules()
         return [gene for gene, module in membership.items() if module == targetModule]
+
+
+    def evaluate_fit(self, minKMEtoStay, genes=None):
+        '''
+        evaluate fit of each gene to its assigned
+        module, unclassifying if the fit is below the
+        minimum KME to stay
+        if a gene list is provided, only evaluates the
+        specified genes
+        '''
+      
+        if genes is None:
+            genes = self.profiles.genes()
+
+        for g in genes:
+            module = self.get_module(g)
+            kME = self.get_kME(g)
+
+            if module == 'UNCLASSIFIED':
+                self.__update_kME(g, float('NaN'))
+
+            if kME < minKMEtoStay:
+                self.__update_module(g, 'UNCLASSIFIED')
+                self.__update_kME(g, float('NaN'))
+
+
+    def merge_close_modules(self, eigengenes, cutHeight):
+        '''
+        merge close modules based on similarity between
+        eigengenes
+
+        return updated eigengene object
+        '''
+        modules = self.get_modules()
+        revisedModules = {}
+
+        for m1 in modules:
+            similarity = eigengenes.similarity(m1)
+            for m2 in modules:
+                if m1 == m2:
+                    continue
+                dissimilarity = round(1.0 - similarity.rx(m2, 1)[0], 2)
+                if dissimilarity <= cutHeight:
+                    revisedModules[m1] = m2
+
+                    # remove m2 so we don't end up mapping m1 to m2 as well as m2 to m1
+                    modules.remove(m2)
+
+                    self.logger.info("Merging " + m1 + " and "
+                                 + m2 + " (D = " + str(dissimilarity) + ")")
+
+        if len(revisedModules) != 0:
+            # update gene membership and kME calculations
+            for m in revisedModules:
+                memberGenes = self.get_module_members(m)
+                newModule = revisedModules[m]
+                for g in memberGenes:
+                    self.update_membership(g, newModule)
+                self.__update_module_kME(m, eigengenes.get_module_eigengene(newModule))
+
+                modules = self.get_modules() # update list of modules
+                eigengenes.update_to_subset(modules) # update eigengenes to reflect new list
+
+        self.logger.info("Done merging close modules: " + str(len(revisedModules)) + " modules merged.")
+        self.logger.info("Retained " + str(len(modules)) + " modules after merge.")
+        return eigengenes
+
+
+    def reassign_to_best_fit(self, eigengenes, reassignThreshold, minKMEtoStay):
+        '''
+        Evaluate eigengene connectivity (kME)
+        for each feature against the eigengenes for each
+        of the final modules found by iWGCNA.
+        If kME(module) > kME(assigned_module)
+        and the p-value <= the reassignThreshold (of WGCNA
+        parameters) then reassign the module
+        membership of the feature.
+
+        returns a count of the number of reassigned genes
+        '''
+        count = 0
+        modules = self.get_modules()
+        for m in modules:
+            # calculate kME of all genes to the module eigengene
+            moduleEigengene = eigengenes.get_module_eigengene(m)
+            moduleKME = calculate_kME(self.profiles, moduleEigengene, False)
+
+            # for each gene not assigned to the current module, test fit
+            for g in self.genes:
+                currentModule = self.get_module(g)
+                if currentModule != m:
+                    kME = self.get_kME(g)
+                    newKME = round(moduleKME.rx2('cor').rx(g, 1)[0], 2)
+                    pvalue = moduleKME.rx2('p').rx(g, 1)[0]
+
+                    if (currentModule == "UNCLASSIFIED" \
+                        and newKME >= minKMEtoStay) \
+                        or (newKME > kME \
+                        and pvalue < reassignThreshold):
+
+                        self.__update_module(g, m)
+                        self.__update_kME(g, newKME)
+                        count = count + 1
+
+        return count
