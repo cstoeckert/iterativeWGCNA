@@ -43,6 +43,14 @@ class Expression(object):
         '''
         return self.profiles.colnames
 
+
+    def expression(self):
+        '''
+        wrapper for accessing self.profiles
+        '''
+        return self.profiles
+
+
     def gene_expression(self, genes):
         '''
         subsets expression data

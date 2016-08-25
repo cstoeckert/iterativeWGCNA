@@ -161,7 +161,7 @@ class IterativeWGCNA(object):
         # transpose membership and kME files (so samples are columns)
         transpose_file_contents('pre-pruning-membership.txt', 'Gene')
         transpose_file_contents('membership.txt', 'Gene')
-        transpose_file_contents('eigengene-connectivity.txt', 'Module')
+        transpose_file_contents('eigengene-connectivity.txt', 'Gene')
 
 
     def reassign_genes_to_best_fit_module(self):
@@ -191,13 +191,13 @@ class IterativeWGCNA(object):
         modules = self.genes.get_modules()
         self.__log_final_modules(modules)
 
-        self.eigengenes = self.eigengenes.load_matrix_from_file('eigengenes.txt')
-        self.eigengenes = self.eigengenes.update_to_subset(modules)
+        self.eigengenes.load_matrix_from_file('eigengenes.txt')
+        self.eigengenes.update_to_subset(modules)
 
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
                                                          self.args.moduleMergeCutHeight)
-        self.logger.debug("FINAL EIGENGENES")
-        self.logger.debug(self.eigengenes)
+        # self.logger.debug("FINAL EIGENGENES")
+        # self.logger.debug(self.eigengenes.matrix)
 
 
     def run_iteration(self, iterationGenes):

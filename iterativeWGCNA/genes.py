@@ -404,8 +404,8 @@ class Genes(object):
         for m in modules:
             # calculate kME of all genes to the module eigengene
             moduleEigengene = eigengenes.get_module_eigengene(m)
-            moduleKME = calculate_kME(self.profiles, moduleEigengene, False)
-
+            moduleKME = calculate_kME(self.profiles.expression(), moduleEigengene, True)
+            
             # for each gene not assigned to the current module, test fit
             for g in self.genes:
                 currentModule = self.get_module(g)

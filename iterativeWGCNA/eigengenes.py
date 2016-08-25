@@ -27,6 +27,10 @@ class Eigengenes(object):
         self.matrix = rsnippets.extractEigengenes(iteration, blocks, samples)
 
 
+    def nrows(self):
+        return self.matrix.nrow
+
+
     def load_matrix_from_file(self, fileName):
         '''
         loads eigengenes from file into an R DataFrame
@@ -83,7 +87,7 @@ class Eigengenes(object):
         '''
         return a submatrix
         '''
-        return self.matrix(ro.StrVector(modules), True)
+        return self.matrix.rx(ro.StrVector(modules), True)
 
 
     def is_empty(self):
