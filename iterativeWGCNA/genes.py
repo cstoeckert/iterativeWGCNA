@@ -376,7 +376,7 @@ class Genes(object):
                 memberGenes = self.get_module_members(m)
                 newModule = revisedModules[m]
                 for g in memberGenes:
-                    self.update_membership(g, newModule)
+                    self.__update_module(g, newModule)
                 self.__update_module_kME(m, eigengenes.get_module_eigengene(newModule))
 
                 modules = self.get_modules() # update list of modules
