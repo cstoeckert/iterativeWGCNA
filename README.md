@@ -11,7 +11,7 @@ iterativeWGCNA has the following dependencies:
 ### Python (version 2.7+)
 
 1. [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
-  * will be installed by Python setup tools or package manager if the iterativeWGCNA package is installed
+  * will be installed by Python setup tools or package manager if the iterativeWGCNA packages is installed
 
 ### R language for statistical computing
 
@@ -21,27 +21,27 @@ iterativeWGCNA has the following dependencies:
 
 ## Code Example
 
-iterativeWGCNA can be run without installing the iterativeWGCNA package by executing the wrapper script `run_iwgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.
+iterativeWGCNA can be run without installing the iterativeWGCNA package by excuting the wrapper script `run_iterative_wgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.
 
 ```
-python run_iwgcna.py -i <input_file_path> 
+python run_iterative_wgcna.py -i <input_file_path> 
 ```
 
-Execute `run_iwgcna.py` with the `-h` (`--help`) flag to see all command line options and file format descriptions:
+Execute `run_iterative_wgcna.py` with the `-h` (`--help`) flag to see all command line options and file format descriptions:
 
 ```
-python run_iwgcna.py -h
+python run_iterative_wgcna.py -h
 ```
 
 if the iterativeWGCNA package was installed, iterativeWGCNA can also be run at the package level using the `-m` switch:
 
 ```
-python -m iwgcna -h
+python -m iterativeWGCNA -h
 ```
 
 ## Installation
 
-To install the iterativeWGCNA package, use the following command:
+iterativeWGCNA can be run without installing the iterativeWGCNA package.  To install the package, use the following command:
 
 ```
 git clone https://github.com/cstoeckert/iterativeWGCNA.git

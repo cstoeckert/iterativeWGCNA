@@ -3,9 +3,9 @@ imports from R; wrapped in functions
 to ensure warning messages go to the R log
 '''
 from rpy2.robjects.packages import importr, SignatureTranslatedAnonymousPackage
-from .snippets import UTIL_FUNCTIONS
+from .snippets import FUNCTIONS
 
-r_utils = SignatureTranslatedAnonymousPackage(UTIL_FUNCTIONS, 'r_utils')
+rsnippets = SignatureTranslatedAnonymousPackage(FUNCTIONS, 'rsnippets')
 
 def base():
     return importr('base')

@@ -7,7 +7,7 @@ from __future__ import with_statement
 from sys import stderr
 import os
 import rpy2.robjects as ro
-from ..r.imports import r_utils
+from ..r.imports import rsnippets
 
 def warning(*objs):
     '''
@@ -44,13 +44,14 @@ def write_data_frame(df, fileName, rowLabel):
     finally:
         df.to_csvfile(fileName, quote=False, sep='\t', col_names=False, append=True)
 
+
 def read_data(fileName):
     '''
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
     data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
-    return r_utils.numeric2real(data)
+    return rsnippets.numeric2real(data)
 
 
 def transpose_file_contents(fileName, rowLabel):

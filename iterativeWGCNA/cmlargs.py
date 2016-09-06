@@ -1,3 +1,6 @@
+#pylint: disable=anomalous-backslash-in-string
+#pylint: disable=invalid-name
+
 '''
 functions for defining, parsing, processing,
 and validating command line arguments
@@ -5,6 +8,7 @@ and validating command line arguments
 
 import re
 import argparse
+import re
 from os import getcwd
 
 def parameter_list(strValue):
@@ -19,13 +23,13 @@ def parameter_list(strValue):
     for p in pairs:
         name, value = p.split('=')
 
+        # Test and cast for booleans
         if value in ['TRUE', 'T', 'True', 't']:
             value = True
-        if value in ['FALSE', 'F', 'False', 'f']:
+        elif value in ['FALSE', 'F', 'False', 'f']:
             value = False
-
         # Test and cast for integer
-        if value.isdigit():
+        elif value.isdigit():
             params[name] = int(value)
         # Test and cast for float
         elif re.match("^\d+?\.\d+?$", value):
@@ -34,6 +38,7 @@ def parameter_list(strValue):
             params[name] = value
 
     return params
+
 
 def restricted_float(x):
     '''
@@ -133,7 +138,7 @@ def parse_command_line_args():
                         type=parameter_list)
 
     parser.add_argument('--enableWGCNAThreads',
-                        help="allow WGCNA to use threading;\nsee WGCNA manual",
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
                         action='store_true')
 
     parser.add_argument('--saveBlocks',

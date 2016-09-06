@@ -3,11 +3,16 @@
 uses rpy2 python library to create a namespace for R functions underlying iterativeWGCNA
 """
 
-UTIL_FUNCTIONS = """
+FUNCTIONS = """
 
 # convert numeric data frame to real
 numeric2real <- function(df) {
      df * 1.0
+}
+
+# return 1-matrix
+dissMatrix <- function(df) {
+    1.0 - df
 }
 
 # wrapper for save object b/c doesn't seem to work with rpy2
