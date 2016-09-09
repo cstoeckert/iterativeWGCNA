@@ -41,6 +41,8 @@ python -m iterativeWGCNA -h
 
 ## Installation
 
+### Instructions
+
 iterativeWGCNA can be run without installing the iterativeWGCNA package.  To install the package, use the following command:
 
 ```
@@ -49,10 +51,31 @@ cd iterativeWGCNA
 python setup.py install
 ```
 
-If you need or prefer to install this in a user directory (non-system), then the `--user` switch will install the package to `.local/bin`:
+To install iterativeWGCNA in a user directory (non-system), then the `--user` switch will install the package to `.local/bin` (on Linux systems):
 
 ```
 git clone https://github.com/cstoeckert/iterativeWGCNA.git
 cd iterativeWGCNA
 python setup.py install --user
+```
+
+### Workarounds
+
+Access to the `readline` library in the context of the `rpy2` library can be problematic and has been [reported elsewhere](https://github.com/ContinuumIO/anaconda-issues/issues/152). In trying to run iterativeWGCNA, an error like the following would be observed:
+```
+Traceback (most recent call last):
+  File "/home/_USER_/iterativeWGCNA-master/run_iterative_wgcna.py", line 7, in <module>
+    from iterativeWGCNA.iterativeWGCNA import IterativeWGCNA
+  File "/home/_USER_/iterativeWGCNA-master/iterativeWGCNA/iterativeWGCNA.py", line 17, in <module>
+    import rpy2.robjects as ro
+  File "/home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/robjects/__init__.py", line 15, in <module>
+    import rpy2.rinterface as rinterface
+  File "/home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/rinterface/__init__.py", line 100, in <module>
+    from rpy2.rinterface._rinterface import *
+ImportError: /home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/rinterface/../../../../libreadline.so.6: undefined symbol: PC
+```
+
+The workaround is to uncomment the following line in `run_iterative_wgcna.py`:
+```
+# import readline
 ```
