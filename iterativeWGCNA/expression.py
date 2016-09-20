@@ -24,7 +24,7 @@ class Expression(object):
 
 
     def nrow(self):
-        ''' 
+        '''
         return number of rows
         '''
         return self.profiles.nrow

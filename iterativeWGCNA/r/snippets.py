@@ -15,6 +15,24 @@ dissMatrix <- function(df) {
     1.0 - df
 }
 
+# return power-weighted matrix 
+powerWeightMatrix <- function(df, power) {
+    df^power
+}
+
+# filter out negative values
+filterNegatives <- function(df) {
+    df[df < 0] <- 0
+    df
+}
+
+
+# set value of matrix diagonal
+diag <- function(df, value) {
+    diag(df) <- value
+    df
+}
+
 # wrapper for save object b/c doesn't seem to work with rpy2
 saveObject <- function(obj, objName, file) {
    assign(objName, obj)

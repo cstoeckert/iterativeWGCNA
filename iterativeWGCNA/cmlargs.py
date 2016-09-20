@@ -153,6 +153,24 @@ def parse_command_line_args():
                         metavar='<dissimilarity>',
                         type=restricted_float)
 
+    parser.add_argument('--generateNetworkSummary',
+                        metavar='<view type>',
+                        choices=['all', 'network', 'input'],
+                        help="generate summary overview of the network (dendrogram & heatmap):\n"
+                        + "network - network comprised only of classified genes\n"
+                        + "input - all genes, with classified highlighted by module assignments\n"
+                        + "all - both views\n"
+                        + "NOTE: all adjacency matrix calculations are\n"
+                        + "done in one block and may fail due to memory allocation\n"
+                        + "issues for large gene-sets")
+
+    parser.add_argument('-s', '--summarizeModule',
+                        metavar='<module name>',
+                        help="generate summary info for specified module;"
+                        + "expects full results from an iterativeWGCNA"
+                        + "run in output directory")
+
+
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
 

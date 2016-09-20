@@ -30,5 +30,3 @@ def graphics():
 def grdevices():
     return importr('grDevices')
 
-
-
