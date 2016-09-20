@@ -30,3 +30,5 @@ def graphics():
 def grdevices():
     return importr('grDevices')
 
+def pheatmap():
+    return importr('pheatmap')

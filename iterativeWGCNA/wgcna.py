@@ -79,7 +79,7 @@ class WgcnaManager(object):
         if signed:
             adjParams['type'] = 'signed'
         else:
-            adjParams['type'] = 'signed'
+            adjParams['type'] = 'unsigned'
         adjParams['datExpr'] = self.__transpose_data()
 
         self.adjacencyMatrix = wgcna().adjacency(**adjParams)
