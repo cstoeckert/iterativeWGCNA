@@ -85,7 +85,7 @@ class WgcnaManager(object):
         self.adjacencyMatrix = wgcna().adjacency(**adjParams)
         self.collect_garbage()
         if removeNegatives:
-            self.adjacencyMatrix = rsnippets.filterNegatives(self.adjacencyMatrix)
+            self.adjacencyMatrix = rsnippets.filterByThreshold(self.adjacencyMatrix, 0)
 
         if removeSelfReferences:
             self.adjacencyMatrix = rsnippets.diag(self.adjacencyMatrix, 0)
