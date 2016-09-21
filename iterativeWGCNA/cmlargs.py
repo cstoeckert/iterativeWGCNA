@@ -50,16 +50,24 @@ def restricted_float(x):
     return x
 
 
+def summaryHelpEpilog():
+    '''
+    text for help epilog for
+    summary
+    '''
+    # TODO Help for summarize script
+    return "COMING SOON"
+
 def helpEpilog():
     '''
     text for help epilog
     '''
 
-    inputFileFormatHelp = ''' 
+    inputFileFormatHelp = '''
 ------------------------------------------------------
 Input File Format
 ------------------------------------------------------
-iWGCNA expects a tab-delimited text file containing 
+iterativeWGCNA expects a tab-delimited text file containing 
 gene expression data arranged such that there is one
 row per gene and one column per sample.  The first column
 should contain unique gene identifiers.  For example:
@@ -72,7 +80,7 @@ Phtf2    60    1000    1600
 ------------------------------------------------------
 WGCNA Parameters
 ------------------------------------------------------
-iWGCNA can accept any parameter valid for the WGCNA
+iterativeWGCNA can accept any parameter valid for the WGCNA
 blockwiseModules function.  
 
 See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
@@ -86,7 +94,7 @@ sets the maximum block size to 5000 genes,
 the correlation type to the biweight correlation,
 and the power-law scaling factor (beta) to 10
 
-If parameters are not specified, iWGCNA uses the default WGCNA settings,
+If parameters are not specified, iterativeWGCNA uses the default WGCNA settings,
 except for the following:
 
 minModuleSize=20
@@ -107,7 +115,7 @@ def parse_command_line_args():
     parse command line args
     '''
 
-    parser = argparse.ArgumentParser(prog='iWGCNA',
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA',
                                      description="perform interative WGCNA analysis",
                                      epilog=helpEpilog(),
                                      formatter_class=argparse.RawTextHelpFormatter)
@@ -164,12 +172,9 @@ def parse_command_line_args():
                         + "done in one block and may fail due to memory allocation\n"
                         + "issues for large gene-sets")
 
-    parser.add_argument('-s', '--summarizeModule',
-                        metavar='<module name>',
-                        help="generate summary info for specified module;"
-                        + "expects full results from an iterativeWGCNA"
-                        + "run in output directory")
-
+    parser.add_argument('-s', '--summarizeModules',
+                        help="generate summary info for all modules",
+                        action='store_true')
 
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
@@ -200,3 +205,65 @@ def set_wgcna_parameter_defaults(params):
 
     return params
 
+
+def parse_summary_command_line_args():
+    '''
+    parse command line args for summary
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA summary',
+                                     description="summarize results from interative WGCNA analysis",
+                                     epilog=summaryHelpEpilog(),
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--inputFile',
+                        metavar='<gene expression file>',
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+    parser.add_argument('-p', '--power',
+                        metavar='<power law beta>',
+                        help="power law beta for weighting the adjacency matrix",
+                        type=parameter_list)
+
+    parser.add_argument('-s', '--signed',
+                        help="generate signed adjacency matrix?",
+                        action='store_true')
+
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
+                        action='store_true')
+
+    parser.add_argument('--generateNetworkSummary',
+                        metavar='<view type>',
+                        choices=['all', 'network', 'input'],
+                        help="generate summary overview of the network (dendrogram & heatmap):\n"
+                        + "network - network comprised only of classified genes\n"
+                        + "input - all genes, with classified highlighted by module assignments\n"
+                        + "all - both views\n"
+                        + "NOTE: all adjacency matrix calculations are\n"
+                        + "done in one block and may fail due to memory allocation\n"
+                        + "issues for large gene-sets")
+
+    parser.add_argument('-s', '--summarizeModule',
+                        metavar='<module name>',
+                        help="generate summary info for specified module;"
+                        + "expects full results from an iterativeWGCNA"
+                        + "run in output directory")
+
+
+    args = parser.parse_args()
+
+    return args

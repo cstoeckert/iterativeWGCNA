@@ -39,6 +39,16 @@ saveObject <- function(obj, objName, file) {
    save(list=c(objName), file = file)
 }
 
+# calculate degree summary for module genes
+degree <- function(adjMatrix, members) {
+    adjSubset <- adjMatrix[members, members]
+    inDegree = sum(adjSubset >= 1.5) / 2 
+    adjSubset <- adjMatrix[members,  !names(adjMatrix) %in% members]
+    outDegree <- sum(adjSubset > 0.5) 
+    list(kIn=inDegree, kOut=outDegree)
+}
+
+
 # given WGCNA blocks, extracts and transposes eigengene matrix
 # labels columns (samples)
 # cleans up module names (removes the "ME")
@@ -73,6 +83,7 @@ removeUnclassified <- function(expr, membership) {
     classified = membership != "UNCLASSIFIED"
     expr[classified, ]
 }
+
 
 """
 

@@ -31,7 +31,7 @@ class Genes(object):
         '''
         self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
-        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN'), 'color': None}) for geneId in self.profiles.genes())
+        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN')}) for geneId in self.profiles.genes())
 
         self.size = len(self.genes)
         self.iteration = None
@@ -49,18 +49,6 @@ class Genes(object):
         returns true if the feature is classified
         '''
         return self.get_module(gene) != 'UNCLASSIFIED'
-
-
-    def __update_color(self, gene, color):
-        '''
-        update gene module color assignment
-        do not add new genes
-        '''
-        if gene in self.genes:
-            self.genes[gene]['color'] = color
-            return True
-        else:
-            return False
 
 
     def __update_module(self, gene, module):
@@ -107,13 +95,6 @@ class Genes(object):
             self.__update_module(gene, module)
 
 
-    def __extract_colors(self):
-        '''
-        extract gene module color as an ordered dict
-        '''
-        return OrderedDict((gene, membership['color']) for gene, membership in self.genes.items())
-
-
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
@@ -126,6 +107,13 @@ class Genes(object):
         public facing method for getting gene membership
         '''
         return self.__extract_modules()
+
+
+    def get_gene_kME(self):
+        '''
+        public facing method for getting all gene kMEs
+        '''
+        return self.__extract_kME()
 
 
     def get_module_kME(self, targetModule):
@@ -375,7 +363,7 @@ class Genes(object):
                     modules.remove(m2)
 
                     self.logger.info("Merging " + m1 + " and "
-                                 + m2 + " (D = " + str(dissimilarity) + ")")
+                                     + m2 + " (D = " + str(dissimilarity) + ")")
 
         if len(revisedModules) != 0:
             # update gene membership and kME calculations
@@ -412,7 +400,7 @@ class Genes(object):
             # calculate kME of all genes to the module eigengene
             moduleEigengene = eigengenes.get_module_eigengene(m)
             moduleKME = calculate_kME(self.profiles.expression(), moduleEigengene, True)
-            
+
             # for each gene not assigned to the current module, test fit
             for g in self.genes:
                 currentModule = self.get_module(g)
@@ -431,24 +419,4 @@ class Genes(object):
                         count = count + 1
 
         return count
-
-
-    def assign_colors(self, moduleColors):
-        '''
-        assign colors to genes according to module membership
-        '''
-        self.logger.debug(moduleColors)
-        for g in self.genes:
-            self.__update_color(g, moduleColors[self.get_module(g)])
-
-
-    def get_module_colors(self, genes=None):
-        '''
-        gets list of colors from gene membership assignments
-        '''
-        colors = self.__extract_colors()
-        if genes is not None:
-            colors = [color for gene, color in colors.items()
-                      if gene in genes]
-        return colors
 

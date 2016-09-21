@@ -1,22 +1,25 @@
 # pylint: disable=invalid-name
+# pylint: disable=no-self-use
+# pylint: disable=too-many-instance-attributes
 
 '''
 manage network (for summaries)
 '''
 
+from __future__ import print_function
+from __future__ import with_statement
+
 import logging
-import sys
-# import igraph
-# import pandas as pd
-# from rpy2.robjects import pandas2ri
+
 from random import randint
+from collections import OrderedDict
+
+import rpy2.robjects as ro
 
 from .wgcna import WgcnaManager
-from .r.imports import grdevices
+from .r.imports import grdevices, base, rsnippets
 
-# from .eigengenes import Eigengenes
-# from .genes import Genes
-# from .module import Module
+from .eigengenes import Eigengenes
 
 class Network(object):
     '''
@@ -26,45 +29,130 @@ class Network(object):
     for summary purposes
     '''
 
-    def __init__(self, genes, eigengenes, args):
+    def __init__(self, args):
         self.logger = logging.getLogger('iterativeWGCNA.Network')
-        self.genes = genes
-        self.classifiedGenes = self.genes.get_classified_genes()
-        self.profiles = self.genes.profiles
-        # self.graph = None
         self.args = args
-        self.eigengenes = eigengenes
-        self.modules = self.genes.get_modules()
-        self.moduleColors = {}
-        self.generate_module_colors()
-        self.genes.assign_colors(self.moduleColors)
+        self.eigengenes = None
 
-        self.weightMatrix = None # membership weight matrix
-        # self.generate_weight_matrix()
+        self.genes = None
+        self.modules = None
+        self.classifiedGenes = None
+        self.profiles = None
+        self.kme = None
+        self.membership = None
 
+        # self.graph = None
+        self.geneColors = None
         self.adjacency = None
         self.weightedAdjacency = None # weighted by shared membership
-        # self.generate_weighted_adjacency()
 
 
-    def summarize(self):
+    def build(self, genes, eigengenes):
+        '''
+        build from iterativeWGCNA result in memory
+        '''
+        self.eigengenes = eigengenes
+        self.genes = genes.get_genes()
+        self.classifiedGenes = genes.get_classified_genes()
+        self.profiles = genes.profiles
+        self.kme = genes.get_gene_kME()
+        self.membership = genes.get_gene_membership()
+
+        self.modules = OrderedDict((module, {'color':None, 'kIn':0.0, 'kOut':0.0}) \
+                                       for module in genes.get_modules())
+        self.modules.update({'UNCLASSIFIED': {'color':None, 'kIn':0.0, 'kOut':0.0}})
+
+        self.__assign_colors()
+        self.__generate_weighted_adjacency()
+
+
+    def __assign_colors(self):
+        self.__generate_module_colors()
+        self.geneColors = OrderedDict((gene, None) for gene in self.genes)
+        self.assign_gene_colors()
+
+
+    def build_from_file(self, profiles):
+        '''
+        initialize Network from iterativeWGCNA output found in path
+        '''
+        self.profiles = profiles
+        self.genes = self.profiles.genes
+        self.modules = OrderedDict((gene, None) for gene in self.genes)
+        self.kme = OrderedDict((gene, None) for gene in self.genes)
+        self.membership = OrderedDict((gene, None) for gene in self.genes)
+        # self.classifiedGenes = __extract_classified_genes()
+
+        self.eigengenes = Eigengenes()
+        self.eigengenes.load_matrix_from_file("eigengenes.txt")
+
+        self.__assign_colors()
+        self.__generate_weighted_adjacency()
+
+
+    def load_membership_from_file(self):
+        '''
+        loads membership assignments from file
+        '''
+        self.profiles = ro.DataFrame.from_csvfile("", sep='\t',
+                                                  header=True, row_names=1)
+
+
+    def summarize_network(self):
         '''
         generate summary figs and data
         '''
+
         self.plot_eigengene_network()
         if self.args.generateNetworkSummary is not None:
             self.__plot_summary_views()
 
+        if self.args.summarizeModules:
+            self.__summarize_network_modularity()
+            self.__write_module_summary()
+            # self summarize modules --> heatmaps, kme
 
-    def generate_module_colors(self):
+
+
+    def __generate_random_color(self, colors):
+        '''
+        generate a random color
+        '''
+        # TODO probably a better way to do this, but...
+        # since we may need > 50 colors, random it is
+        color = '#' + '%06X' % randint(0, 0xFFFFFF)
+        while color in colors:
+            color = '#' + '%06X' % randint(0, 0xFFFFFF)
+        return color
+
+
+    def __generate_module_colors(self):
         '''
         generate module color map
         '''
+        colors = []
         for m in self.modules:
-            # TODO probably a better way to do this, but...
-            # since we may need > 50 colors, random it is
-            self.moduleColors[m] = '#' + '%06X' % randint(0, 0xFFFFFF)
-        self.moduleColors["UNCLASSIFIED"] = '#D3D3D3'
+            color = self.__generate_random_color(colors)
+            colors.append(color)
+            self.modules[m]['color'] = color
+
+        self.modules["UNCLASSIFIED"]['color'] = '#D3D3D3'
+
+
+    def assign_gene_colors(self):
+        '''
+        assign colors to genes according to module membership
+        '''
+        for g in self.genes:
+            self.geneColors[g] = self.modules[self.membership[g]]['color']
+
+
+    def get_gene_colors(self, targetGenes):
+        '''
+        retrieve colors for specified gene list
+        '''
+        colors = [color for gene, color in self.geneColors.items() if gene in targetGenes]
+        return colors
 
 
     def plot_eigengene_network(self):
@@ -83,7 +171,7 @@ class Network(object):
         '''
 
         expression = self.profiles.gene_expression(genes)
-        colors = self.genes.get_module_colors(genes)
+        colors = self.get_gene_colors(genes)
         manager = WgcnaManager(expression, self.args.wgcnaParameters)
         grdevices().pdf(filename)
         manager.plot_network_overview(colors, title)
@@ -96,18 +184,25 @@ class Network(object):
         '''
         if self.args.generateNetworkSummary == 'input' \
            or self.args.generateNetworkSummary == 'all':
-            self.plot_network_summary(self.genes.get_genes(),
+            self.plot_network_summary(self.genes,
                                       "All Genes (incl. unclassified)",
-                                      "input-overview.pdf")
+                                      "input-block-diagram.pdf")
 
         if self.args.generateNetworkSummary == 'network' \
            or self.args.generateNetworkSummary == 'all':
             self.plot_network_summary(self.classifiedGenes,
                                       "Network (classified genes)",
-                                      "network-overview.pdf")
+                                      "network-block-diagram.pdf")
 
 
-    def generate_weighted_adjacency(self):
+    def __get_module_members(self, targetModule):
+        '''
+        get genes in targetModule
+        '''
+        return [gene for gene, module in self.membership.items() if module == targetModule]
+
+
+    def __generate_weighted_adjacency(self):
         '''
         gene x gene weight matrix with matrix[r][c] = 1
         if genes r & c are in the same module; for
@@ -118,25 +213,63 @@ class Network(object):
         manager = WgcnaManager(self.profiles.gene_expression(self.classifiedGenes),
                                self.args)
         manager.adjacency(True, True, True) # signed, but filter negatives & self-refs
-        self.adjacency = manager.adjacencyMatrix
+        self.adjacency = base().as_data_frame(manager.adjacencyMatrix)
         self.weightedAdjacency = self.adjacency
 
         for m in self.modules:
-            members = self.genes.get_module_members(m)
+            if m == 'UNCLASSIFIED':
+                continue
+
+            members = self.__get_module_members(m)
             for r in members:
                 indexR = self.weightedAdjacency.names.index(r)
-                self.logger.debug(r)
-                self.logger.debug(self.weightedAdjacency.names)
-                self.logger.debug("gene: " + r + " index " + str(indexR))
-
                 for c in members:
-                    adj = self.adjacency.rx(r, c)
-                    self.logger.debug(adj)
-
+                    if r == c:
+                        continue
+                    indexC = self.weightedAdjacency.names.index(c)
+                    adj = self.adjacency[indexR][indexC]
                     if adj > 0:
-                        self.logger.debug(self.weightedAdjacency.names)
-                        indexC = self.weightedAdjacency.names.index(c)
                         self.weightedAdjacency[indexR][indexC] = adj + 1
-                        self.logger.debug(self.weightedAdjacency.rx(r, c))
 
-                    sys.exit(1)
+
+    def calculate_degree_modularity(self, targetModule):
+        '''
+        calculates in degree (kIn) and out degree (kOut)
+        for the target module
+        '''
+        members = self.__get_module_members(targetModule)
+        degree = rsnippets.degree(self.weightedAdjacency, ro.StrVector(members))
+        self.modules['kIn'] = degree.rx2('kIn')
+        self.modules['kOut'] = degree.rx2('kOut')
+
+
+    def __summarize_network_modularity(self):
+        '''
+        summarize modularity of network
+        calculates in degree (kIn) and out degree (kOut) per module
+        '''
+        for m in self.modules:
+            self.calculate_degree_modularity(m)
+
+
+    def __get_module_size(self, targetModule):
+        '''
+        return # of module members for target module
+        '''
+        return len(self.__get_module_members(targetModule))
+
+
+    def __write_module_summary(self):
+        '''
+        writes network modularity to a file
+        '''
+        fileName = 'module-summary.txt'
+        with open(fileName, 'w') as f:
+            header = ('Module', 'Size', 'Color', 'kIn', 'kOut')
+            print('\t'.join(header), file=f)
+            for m in self.modules:
+                print(m,
+                      self.__get_module_size(m),
+                      self.modules[m]['color'],
+                      self.modules[m]['kIn'],
+                      self.modules[m]['kOut'], sep='\t', file=f)

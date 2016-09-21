@@ -29,24 +29,12 @@ class IterativeWGCNA(object):
     main application
     '''
 
-    def __init__(self, args):
+    def __init__(self, args, expressionOnly=False):
         self.args = args
         create_dir(self.args.workingDir)
 
         self.__initialize_log()
         self.logger.info(strftime("%c"))
-
-        self.profiles = None
-        self.genes = None
-        self.eigengenes = Eigengenes()
-        self.modules = None # hash of module name to color for plotting
-
-        self.passCount = 1
-        self.iterationCount = 1
-        self.iteration = None # unique label for iteration
-
-        self.algorithmConverged = False
-        self.passConverged = False
 
         self.__initialize_R()
         self.__log_parameters()
@@ -54,10 +42,22 @@ class IterativeWGCNA(object):
         # load expression data and
         # initialize Genes object
         # to store results
+        self.profiles = None
         self.__load_expression_profiles()
         self.__log_input_data()
 
-        self.genes = Genes(self.profiles)
+        if not expressionOnly:
+            self.genes = None
+            self.eigengenes = Eigengenes()
+            self.modules = None # hash of module name to color for plotting
+
+            self.passCount = 1
+            self.iterationCount = 1
+            self.iteration = None # unique label for iteration
+
+            self.algorithmConverged = False
+            self.passConverged = False
+            self.genes = Genes(self.profiles)
 
 
     def run_pass(self, passGenes):
@@ -137,8 +137,9 @@ class IterativeWGCNA(object):
         '''
         generate summary output and graphics
         '''
-        network = Network(self.genes, self.eigengenes, self.args)
-        network.summarize()
+        network = Network(self.args)
+        network.build(self.genes, self.eigengenes)
+        network.summarize_network()
 
 
     def run(self):

@@ -1,11 +1,10 @@
 # pylint: disable=invalid-name
 # pylint: disable=unused-import
 '''
-stores a single module; for summary purposes
+manage modules
 '''
 
 import logging
-
 import rpy2.robjects as ro
 
 # from .expression import Expression
@@ -16,17 +15,18 @@ import rpy2.robjects as ro
 
 from .analysis import calculate_kME
 
-class Module(object):
+class Modules(object):
     '''
-    a module, incl: size, members, expression profiles, name, color
-    used to facilitate per module summaries
+    list of modules and their properties
     '''
 
     def __init__(self, name, genes, eigengene):
         '''
         initialize module object
         '''
-        self.logger = logging.getLogger('iterativeWGCNA.Module')
+        self.logger = logging.getLogger('iterativeWGCNA.Modules')
+        self.modules = 1
+
         self.name = name
         self.members = genes.get_module_members(self.name)
         self.expression = None
