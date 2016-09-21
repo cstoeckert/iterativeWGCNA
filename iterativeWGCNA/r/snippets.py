@@ -20,9 +20,10 @@ powerWeightMatrix <- function(df, power) {
     df^power
 }
 
-# filter out negative values
-filterNegatives <- function(df) {
-    df[df < 0] <- 0
+
+# set values < thresshold to 0
+filterByThreshold <- function(df, threshold) {
+    df[df < threshold] <- 0
     df
 }
 
@@ -40,11 +41,11 @@ saveObject <- function(obj, objName, file) {
 }
 
 # calculate degree summary for module genes
-degree <- function(adjMatrix, members) {
+degree <- function(adjMatrix, members, threshold) {
     adjSubset <- adjMatrix[members, members]
-    inDegree = sum(adjSubset >= 1.5) / 2 
+    inDegree = sum(adjSubset >= 1 + threshold) / 2 
     adjSubset <- adjMatrix[members,  !names(adjMatrix) %in% members]
-    outDegree <- sum(adjSubset > 0.5) 
+    outDegree <- sum(adjSubset >= threshold) 
     list(kIn=inDegree, kOut=outDegree)
 }
 
