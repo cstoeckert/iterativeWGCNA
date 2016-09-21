@@ -246,7 +246,7 @@ def parse_summary_command_line_args():
                         help="power law beta for weighting the adjacency matrix",
                         type=parameter_list)
 
-    parser.add_argument('-s', '--signed',
+    parser.add_argument('--signed',
                         help="generate signed adjacency matrix?",
                         action='store_true')
 

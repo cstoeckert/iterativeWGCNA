@@ -29,15 +29,16 @@ class IterativeWGCNA(object):
     main application
     '''
 
-    def __init__(self, args, expressionOnly=False):
+    def __init__(self, args, summaryOnly=False):
         self.args = args
         create_dir(self.args.workingDir)
 
-        self.__initialize_log()
+        self.__initialize_log(summaryOnly)
         self.logger.info(strftime("%c"))
 
         self.__initialize_R()
-        self.__log_parameters()
+        if not summaryOnly:
+            self.__log_parameters()
 
         # load expression data and
         # initialize Genes object
@@ -46,7 +47,7 @@ class IterativeWGCNA(object):
         self.__load_expression_profiles()
         self.__log_input_data()
 
-        if not expressionOnly:
+        if not summaryOnly:
             self.genes = None
             self.eigengenes = Eigengenes()
             self.modules = None # hash of module name to color for plotting
@@ -292,11 +293,15 @@ class IterativeWGCNA(object):
             wgcna().enableWGCNAThreads()
 
 
-    def __initialize_log(self):
+    def __initialize_log(self, summaryLog=False):
         '''
         initialize log by setting path and file format
         '''
-        logging.basicConfig(filename=self.args.workingDir + '/iterativeWGCNA.log',
+        if summaryLog:
+            logName = 'networkSummary.log'
+        else:
+            logName = 'iterativeWGCNA.log'
+        logging.basicConfig(filename=self.args.workingDir + '/' + logName,
                             filemode='w', format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
