@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name
 # pylint: disable=no-self-use
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=redefined-variable-type
 
 '''
 manage network (for summaries)
@@ -58,9 +59,9 @@ class Network(object):
         self.kme = genes.get_gene_kME()
         self.membership = genes.get_gene_membership()
 
-        self.modules = OrderedDict((module, {'color':None, 'kIn':0.0, 'kOut':0.0}) \
+        self.modules = OrderedDict((module, {'color':None, 'kIn':0, 'kOut':0}) \
                                        for module in genes.get_modules())
-        self.modules.update({'UNCLASSIFIED': {'color':None, 'kIn':0.0, 'kOut':0.0}})
+        self.modules.update({'UNCLASSIFIED': {'color':None, 'kIn':'NA', 'kOut':'NA'}})
 
         self.__assign_colors()
         self.__generate_weighted_adjacency()
@@ -77,25 +78,68 @@ class Network(object):
         initialize Network from iterativeWGCNA output found in path
         '''
         self.profiles = profiles
-        self.genes = self.profiles.genes
-        self.modules = OrderedDict((gene, None) for gene in self.genes)
-        self.kme = OrderedDict((gene, None) for gene in self.genes)
-        self.membership = OrderedDict((gene, None) for gene in self.genes)
-        # self.classifiedGenes = __extract_classified_genes()
+        self.genes = self.profiles.genes()
+
+        # when membership is loaded from file, modules and classified
+        # genes are determined as well
+        self.classifiedGenes = []
+        self.modules = []
+        self.membership = self.__load_membership_from_file()
+        self.modules = OrderedDict((module, {'color':None, 'kIn':0, 'kOut':0}) \
+                                       for module in self.modules)
+        self.modules['UNCLASSIFIED']['color'] = None
+        self.modules['UNCLASSIFIED']['kIn'] = 'NA'
+        self.modules['UNCLASSIFIED']['kOut'] = 'NA'
+
+        self.logger.debug(self.modules)
+
+        self.kme = self.__load_kme_from_file()
 
         self.eigengenes = Eigengenes()
         self.eigengenes.load_matrix_from_file("eigengenes.txt")
 
-        self.__assign_colors()
-        self.__generate_weighted_adjacency()
+        # TODO fix error: 
+        # self.geneColors[g] = self.modules[self.membership[g]]['color']
+        # TypeError: 'NoneType' object has no attribute '__getitem_'_
+        
+        # self.__assign_colors()
+        # self.__generate_weighted_adjacency()
 
 
-    def load_membership_from_file(self):
+    def __load_membership_from_file(self):
         '''
         loads membership assignments from file
+        and assembles list of classified genes
+        and determines list of unique modules
         '''
-        self.profiles = ro.DataFrame.from_csvfile("", sep='\t',
-                                                  header=True, row_names=1)
+        membership = ro.DataFrame.from_csvfile("membership.txt", sep='\t',
+                                               header=True, row_names=1, as_is=True)
+
+        finalIndex = membership.names.index('final')
+        self.membership = OrderedDict((gene, None) for gene in self.genes)
+        for g in self.genes:
+            module = membership.rx(g, finalIndex)[0]
+            self.modules.append(module)
+            self.membership[g] = module
+            if module != 'UNCLASSIFIED':
+                if 'p' not in module:
+                    self.logger.debug("Module: " + module + "; Gene: " + g)
+                self.classifiedGenes.append(g)
+        # self.logger.debug(self.modules)
+        self.modules = list(set(self.modules)) # gets unique list of modules
+
+
+    def __load_kme_from_file(self):
+        '''
+        loads kME to assigned module from file
+        '''
+        kME = ro.DataFrame.from_csvfile("eigengene-connectivity.txt", sep='\t',
+                                        header=True, row_names=1, as_is=True)
+
+        finalIndex = kME.names.index('final')
+        self.kme = OrderedDict((gene, None) for gene in self.genes)
+        for g in self.genes:
+            self.kme[g] = kME.rx(g, finalIndex)[0]
 
 
     def summarize_network(self):
@@ -109,9 +153,9 @@ class Network(object):
 
         if self.args.summarizeModules:
             self.__summarize_network_modularity()
+            self.logger.debug(self.modules)
             self.__write_module_summary()
             # self summarize modules --> heatmaps, kme
-
 
 
     def __generate_random_color(self, colors):
@@ -238,9 +282,12 @@ class Network(object):
         for the target module
         '''
         members = self.__get_module_members(targetModule)
-        degree = rsnippets.degree(self.weightedAdjacency, ro.StrVector(members))
-        self.modules['kIn'] = degree.rx2('kIn')
-        self.modules['kOut'] = degree.rx2('kOut')
+        # self.logger.debug(targetModule)
+        # self.logger.debug(members)
+        degree = rsnippets.degree(self.adjacency, ro.StrVector(members),
+                                  self.args.edgeWeight)
+        self.modules[targetModule]['kIn'] = int(degree.rx2('kIn')[0])
+        self.modules[targetModule]['kOut'] = int(degree.rx2('kOut')[0])
 
 
     def __summarize_network_modularity(self):
@@ -249,7 +296,8 @@ class Network(object):
         calculates in degree (kIn) and out degree (kOut) per module
         '''
         for m in self.modules:
-            self.calculate_degree_modularity(m)
+            if m != 'UNCLASSIFIED':
+                self.calculate_degree_modularity(m)
 
 
     def __get_module_size(self, targetModule):
@@ -273,3 +321,16 @@ class Network(object):
                       self.modules[m]['color'],
                       self.modules[m]['kIn'],
                       self.modules[m]['kOut'], sep='\t', file=f)
+
+
+    def export_cytoscape_json(self):
+        '''
+        creates and saves a cytoscape json file
+        '''
+        
+        filterLevel = self.args.edgeWeight
+
+        if self.weightedAdjacency is None:
+            self.__generate_weighted_adjacency()
+
+        
