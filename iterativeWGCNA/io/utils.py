@@ -71,5 +71,11 @@ def transpose_file_contents(fileName, rowLabel):
                 line[0] = rowLabel
                 line = tuple(line)
                 header = False
-                
+
+            # b/c rpy2 replaces '-' in gene symbols with '.'
+            if '.' in line[0]:
+                line = list(line)
+                line[0] = line[0].replace('.', '-')
+                line = tuple(line)
+
             print('\t'.join(line), file=f)
