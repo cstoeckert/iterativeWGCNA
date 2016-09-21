@@ -386,7 +386,6 @@ class IterativeWGCNA(object):
             warning(modules)
 
 
-
     def write_gene_counts(self, initial, fit):
         '''
         writes the number of kept and dropped genes at the end of an iteration

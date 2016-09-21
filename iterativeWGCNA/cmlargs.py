@@ -176,6 +176,14 @@ def parse_command_line_args():
                         help="generate summary info for all modules",
                         action='store_true')
 
+
+    parser.add_argument('-e', '--edgeWeight',
+                        metavar='<min edge weight>',
+                        default=0.5,
+                        help="min edge weight for network summary; filters for\n"
+                        + "connections supported by a correlation >= threshold",
+                        type=restricted_float)
+
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
 
