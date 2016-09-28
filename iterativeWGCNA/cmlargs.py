@@ -8,7 +8,6 @@ and validating command line arguments
 
 import re
 import argparse
-import re
 from os import getcwd
 
 def parameter_list(strValue):
@@ -161,31 +160,10 @@ def parse_command_line_args():
                         metavar='<dissimilarity>',
                         type=restricted_float)
 
-    parser.add_argument('--generateNetworkSummary',
-                        metavar='<view type>',
-                        choices=['all', 'network', 'input'],
-                        help="generate summary overview of the network (dendrogram & heatmap):\n"
-                        + "network - network comprised only of classified genes\n"
-                        + "input - all genes, with classified highlighted by module assignments\n"
-                        + "all - both views\n"
-                        + "NOTE: all adjacency matrix calculations are\n"
-                        + "done in one block and may fail due to memory allocation\n"
-                        + "issues for large gene-sets")
-
-    parser.add_argument('-s', '--summarizeModules',
-                        help="generate summary info for all modules",
-                        action='store_true')
-
-
-    parser.add_argument('-e', '--edgeWeight',
-                        metavar='<min edge weight>',
-                        default=0.5,
-                        help="min edge weight for network summary; filters for\n"
-                        + "connections supported by a correlation >= threshold",
-                        type=restricted_float)
-
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
+    # set edge weight to the minKME
+    args.edgeWeight = args.wgcnaParameters['minKMEtoStay']
 
     return args
 
@@ -205,12 +183,13 @@ def set_wgcna_parameter_defaults(params):
     if 'minKMEtoStay' not in params:
         params['minKMEtoStay'] = 0.8
     if 'minCoreKME' not in params:
-        params['minCoreKME'] = 0.8
+        params['minCoreKME'] = params['minKMEtoStay']
     if 'minModuleSize' not in params:
         params['minModuleSize'] = 20
     if 'reassignThreshold' not in params:
         params['reassignThreshold'] = 0.05 # 0.0000001 # 1e-6
-
+    if 'power' not in params:
+        params['power'] = 6
     return params
 
 
@@ -244,7 +223,8 @@ def parse_summary_command_line_args():
     parser.add_argument('-p', '--power',
                         metavar='<power law beta>',
                         help="power law beta for weighting the adjacency matrix",
-                        type=parameter_list)
+                        default=6,
+                        type=int)
 
     parser.add_argument('--signed',
                         help="generate signed adjacency matrix?",
@@ -271,7 +251,11 @@ def parse_summary_command_line_args():
                         + "expects full results from an iterativeWGCNA"
                         + "run in output directory")
 
+    parser.add_argument('-e', '--edgeWeight',
+                        metavar='<min edge weight>',
+                        default=0.5,
+                        help="min edge weight for network summary; filters for\n"
+                        + "connections supported by a correlation >= threshold",
+                        type=restricted_float)
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()

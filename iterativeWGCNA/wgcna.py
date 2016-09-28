@@ -5,6 +5,7 @@ wgcna functions
 '''
 
 import logging
+from argparse import Namespace
 import rpy2.robjects as ro
 from .r.imports import base, wgcna, rsnippets, stats
 
@@ -15,6 +16,11 @@ class WgcnaManager(object):
     def __init__(self, data, params):
         self.data = data
         self.params = params
+        #if type(params) == Namespace:
+        #     self.params = vars(params)
+        #else:
+        self.params = self.params
+            
         self.adjacencyMatrix = None
         self.TOM = None
         self.dissimilarityMatrix = None
@@ -72,6 +78,7 @@ class WgcnaManager(object):
         '''
         calculate adjacency matrix; from pearson correlation
         '''
+
         adjParams = {}
         adjParams['power'] = self.params['power'] if 'power' in self.params else 6
         adjParams['corFnc'] = 'cor'
@@ -81,7 +88,7 @@ class WgcnaManager(object):
         else:
             adjParams['type'] = 'unsigned'
         adjParams['datExpr'] = self.__transpose_data()
-
+        
         self.adjacencyMatrix = wgcna().adjacency(**adjParams)
         self.collect_garbage()
         if removeNegatives:
@@ -90,6 +97,7 @@ class WgcnaManager(object):
         if removeSelfReferences:
             self.adjacencyMatrix = rsnippets.diag(self.adjacencyMatrix, 0)
 
+            
 
     def TOM_dist(self):
         '''

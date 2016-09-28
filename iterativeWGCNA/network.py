@@ -39,7 +39,7 @@ class Network(object):
         self.modules = None
         self.classifiedGenes = None
         self.profiles = None
-        self.kme = None
+        self.kME = None
         self.membership = None
 
         # self.graph = None
@@ -56,12 +56,11 @@ class Network(object):
         self.genes = genes.get_genes()
         self.classifiedGenes = genes.get_classified_genes()
         self.profiles = genes.profiles
-        self.kme = genes.get_gene_kME()
+        self.kME = genes.get_gene_kME()
         self.membership = genes.get_gene_membership()
 
-        self.modules = OrderedDict((module, {'color':None, 'kIn':0, 'kOut':0}) \
-                                       for module in genes.get_modules())
-        self.modules.update({'UNCLASSIFIED': {'color':None, 'kIn':'NA', 'kOut':'NA'}})
+        self.modules = genes.get_modules()
+        self.__initialize_module_properties()
 
         self.__assign_colors()
         self.__generate_weighted_adjacency()
@@ -73,6 +72,25 @@ class Network(object):
         self.assign_gene_colors()
 
 
+    def __initialize_module_properties(self):
+        '''
+        transform module list into dict with placeholders
+        for color, kIn, and kOut
+        and values for size
+        '''
+        self.modules = OrderedDict((module,
+                                    {'color':None,
+                                     'kIn':0,
+                                     'kOut':0,
+                                     'size':self.__get_module_size(module),
+                                     'density':0}) \
+                                       for module in self.modules)
+        self.modules.update({'UNCLASSIFIED': {'color':None, 'kIn': 0,
+                                              'kOut': 0,
+                                              'size': self.__get_module_size('UNCLASSIFIED'),
+                                              'density': 0.0}})
+
+
     def build_from_file(self, profiles):
         '''
         initialize Network from iterativeWGCNA output found in path
@@ -82,28 +100,17 @@ class Network(object):
 
         # when membership is loaded from file, modules and classified
         # genes are determined as well
-        self.classifiedGenes = []
-        self.modules = []
-        self.membership = self.__load_membership_from_file()
-        self.modules = OrderedDict((module, {'color':None, 'kIn':0, 'kOut':0}) \
-                                       for module in self.modules)
-        self.modules['UNCLASSIFIED']['color'] = None
-        self.modules['UNCLASSIFIED']['kIn'] = 'NA'
-        self.modules['UNCLASSIFIED']['kOut'] = 'NA'
-
-        self.logger.debug(self.modules)
-
-        self.kme = self.__load_kme_from_file()
+        self.__load_membership_from_file()
+        self.kME = self.__load_kme_from_file()
 
         self.eigengenes = Eigengenes()
-        self.eigengenes.load_matrix_from_file("eigengenes.txt")
+        self.eigengenes.load_matrix_from_file("eigengenes-final.txt")
 
-        # TODO fix error: 
-        # self.geneColors[g] = self.modules[self.membership[g]]['color']
-        # TypeError: 'NoneType' object has no attribute '__getitem_'_
-        
-        # self.__assign_colors()
-        # self.__generate_weighted_adjacency()
+        self.__initialize_module_properties()
+        self.logger.debug(self.modules)
+
+        self.__assign_colors()
+        self.__generate_weighted_adjacency()
 
 
     def __load_membership_from_file(self):
@@ -116,7 +123,11 @@ class Network(object):
                                                header=True, row_names=1, as_is=True)
 
         finalIndex = membership.names.index('final')
+
         self.membership = OrderedDict((gene, None) for gene in self.genes)
+        self.classifiedGenes = []
+        self.modules = []
+
         for g in self.genes:
             module = membership.rx(g, finalIndex)[0]
             self.modules.append(module)
@@ -137,27 +148,47 @@ class Network(object):
                                         header=True, row_names=1, as_is=True)
 
         finalIndex = kME.names.index('final')
-        self.kme = OrderedDict((gene, None) for gene in self.genes)
+        self.kME = OrderedDict((gene, None) for gene in self.genes)
         for g in self.genes:
-            self.kme[g] = kME.rx(g, finalIndex)[0]
+            self.kME[g] = kME.rx(g, finalIndex)[0]
 
 
     def summarize_network(self):
         '''
         generate summary figs and data
         '''
-
         self.plot_eigengene_network()
-        if self.args.generateNetworkSummary is not None:
-            self.__plot_summary_views()
-
-        if self.args.summarizeModules:
-            self.__summarize_network_modularity()
-            self.logger.debug(self.modules)
-            self.__write_module_summary()
-            # self summarize modules --> heatmaps, kme
+        self.__plot_summary_views()
+        self.__summarize_network_modularity()
+        self.__write_module_summary()
 
 
+    def summarize_module(self, module):
+        '''
+        generate summare info for the specified module
+        '''
+        self.calculate_degree_modularity(module)
+
+        self.__plot_module_overview(module)
+        self.__plot_module_kME(module)
+
+
+    def __plot_module_overview(self, module):
+        '''
+        plot heatmap, dendrogram, and eigengene
+        '''
+        members = self.__get_module_members(module)
+        eigengene = self.eigengenes.get_module_eigengene(module)
+        expression = self.profiles.gene_expression(members)
+
+
+    def __plot_module_kME(self, module):
+        '''
+        plots module eigengene connectivity (kME)
+        '''
+        members = self.__get_module_members(module)
+        kME =  [kME for gene, kME in self.kME.items() if gene in members]
+        
     def __generate_random_color(self, colors):
         '''
         generate a random color
@@ -204,7 +235,7 @@ class Network(object):
         wrapper for plotting the eigengene network to pdf
         '''
         grdevices().pdf("eigengene-network.pdf")
-        manager = WgcnaManager(self.eigengenes.matrix, self.args.wgcnaParameters)
+        manager = WgcnaManager(self.eigengenes.matrix, None)
         manager.plot_eigengene_network()
         grdevices().dev_off()
 
@@ -253,9 +284,9 @@ class Network(object):
         weighted graph viz and to simply
         calc of in/out degree
         '''
-
+        self.logger.debug(self.args)
         manager = WgcnaManager(self.profiles.gene_expression(self.classifiedGenes),
-                               self.args)
+                               self.args.wgcnaParameters)
         manager.adjacency(True, True, True) # signed, but filter negatives & self-refs
         self.adjacency = base().as_data_frame(manager.adjacencyMatrix)
         self.weightedAdjacency = self.adjacency
@@ -282,12 +313,13 @@ class Network(object):
         for the target module
         '''
         members = self.__get_module_members(targetModule)
-        # self.logger.debug(targetModule)
-        # self.logger.debug(members)
+
         degree = rsnippets.degree(self.adjacency, ro.StrVector(members),
                                   self.args.edgeWeight)
         self.modules[targetModule]['kIn'] = int(degree.rx2('kIn')[0])
         self.modules[targetModule]['kOut'] = int(degree.rx2('kOut')[0])
+        size = self.modules[targetModule]['size']
+        self.modules[targetModule]['density'] = float(self.modules[targetModule]['kIn'])/(float(size) * (float(size) - 1.0)/2.0)
 
 
     def __summarize_network_modularity(self):
@@ -313,24 +345,35 @@ class Network(object):
         '''
         fileName = 'module-summary.txt'
         with open(fileName, 'w') as f:
-            header = ('Module', 'Size', 'Color', 'kIn', 'kOut')
+            header = ('module', 'size', 'color',
+                      'kOut', 'avg_node_kOut',
+                      'kIn',
+                      'module_density', 'kIn2kOut_ratio')
             print('\t'.join(header), file=f)
             for m in self.modules:
+                kIn = self.modules[m]['kIn']
+                kOut = self.modules[m]['kOut']
+                size = self.modules[m]['size']
+                avg_kOut = "{0:0.0f}".format(round(float(kOut) / float(size)))
+                ratio = "{0:0.2f}".format(float(kIn) / float(kOut)) \
+                         if kOut != 0 else 'NA'
+
                 print(m,
-                      self.__get_module_size(m),
+                      size,
                       self.modules[m]['color'],
-                      self.modules[m]['kIn'],
-                      self.modules[m]['kOut'], sep='\t', file=f)
+                      kOut, avg_kOut,
+                      kIn,
+                      "{0:0.1f}".format(self.modules[m]['density']),
+                      ratio,
+                      sep='\t', file=f)
 
 
     def export_cytoscape_json(self):
         '''
         creates and saves a cytoscape json file
         '''
-        
         filterLevel = self.args.edgeWeight
 
         if self.weightedAdjacency is None:
             self.__generate_weighted_adjacency()
 
-        
