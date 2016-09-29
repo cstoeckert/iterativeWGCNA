@@ -6,8 +6,10 @@ from __future__ import with_statement
 
 from sys import stderr
 import os
+import re
 import rpy2.robjects as ro
 from ..r.imports import rsnippets
+
 
 def warning(*objs):
     '''
@@ -76,6 +78,14 @@ def transpose_file_contents(fileName, rowLabel):
             if '.' in line[0]:
                 line = list(line)
                 line[0] = line[0].replace('.', '-')
+                line = tuple(line)
+
+            # b/c R tacks an X on to gene names that start
+            # with a #
+            if re.search('^X\d', line[0]) is not None:
+                print(line[0], file=stderr)
+                line = list(line)
+                line[0] = re.sub('^X', '', line[0])
                 line = tuple(line)
 
             print('\t'.join(line), file=f)
