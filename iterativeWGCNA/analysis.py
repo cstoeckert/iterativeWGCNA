@@ -2,6 +2,8 @@
 functions in support of data analysis
 '''
 
+# TODO move to RManager or wgcnaManager
+
 from .r.imports import wgcna, stats, base
 
 def calculate_kME(expr, eigengene, calculateP):

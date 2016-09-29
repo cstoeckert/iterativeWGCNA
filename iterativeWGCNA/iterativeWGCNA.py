@@ -208,8 +208,6 @@ class IterativeWGCNA(object):
 
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
                                                          self.args.moduleMergeCutHeight)
-        # self.logger.debug("FINAL EIGENGENES")
-        # self.logger.debug(self.eigengenes.matrix)
 
 
     def run_iteration(self, iterationGenes):
@@ -231,14 +229,15 @@ class IterativeWGCNA(object):
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
         # fitness and update gene module membership
-        self.eigengenes.extract_from_blocks(self.iteration, blocks, self.profiles.samples())
+        self.eigengenes.extract_from_blocks(self.iteration, blocks,
+                                            self.profiles.samples())
 
         if not self.eigengenes.is_empty():
             self.eigengenes.write(False)
 
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
-            self.genes.update_kME(self.eigengenes)
+            self.genes.update_kME(self.eigengenes, iterationGenes)
             self.genes.write(False) # output before pruning
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],

@@ -163,7 +163,7 @@ class Genes(object):
             return False
 
 
-    def __update_module_kME(self, module, eigengene):
+    def __update_module_kME(self, module, eigengene, genes=None):
         '''
         update member gene eigengene connectivity (kME)
         for specified module and eigengene
@@ -173,17 +173,19 @@ class Genes(object):
                                   eigengene, False)
 
         for gene in memberKME.rownames:
-            self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
+            if genes is not None:
+                if gene in genes:
+                    self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
 
 
-    def update_kME(self, eigengenes):
+    def update_kME(self, eigengenes, genes=None):
         '''
         update module kME given its eigengene
         '''
         modules = self.get_modules()
         for m in modules:
             moduleEigengene = eigengenes.get_module_eigengene(m)
-            self.__update_module_kME(m, moduleEigengene)
+            self.__update_module_kME(m, moduleEigengene, genes)
 
 
     def __write_kME(self):
@@ -204,7 +206,8 @@ class Genes(object):
         to files
         '''
         self.__write_modules(isPruned)
-        self.__write_kME()
+        if isPruned:
+            self.__write_kME()
         return None
 
 
