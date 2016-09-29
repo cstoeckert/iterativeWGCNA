@@ -15,10 +15,6 @@ def wgcna():
     return importr('WGCNA')
 
 
-def igraph():
-    return importr('igraph')
-
-
 def stats():
     return importr('stats')
 
@@ -31,6 +27,5 @@ def grdevices():
     return importr('grDevices')
 
 
-def gplots():
-    return importr('gplots')
-
+def pheatmap():
+    return importr('pheatmap')

@@ -12,7 +12,6 @@ import logging
 import sys
 import os
 from time import strftime
-from collections import OrderedDict
 
 import rpy2.robjects as ro
 from .genes import Genes
@@ -21,7 +20,7 @@ from .eigengenes import Eigengenes
 from .network import Network
 from .wgcna import WgcnaManager
 from .io.utils import create_dir, read_data, warning, transpose_file_contents
-from .r.imports import base, wgcna, rsnippets, grdevices
+from .r.imports import base, wgcna, rsnippets
 
 
 class IterativeWGCNA(object):
@@ -325,7 +324,7 @@ class IterativeWGCNA(object):
         log WGCNA parameter choices and working
         directory name
         '''
-      
+
         self.logger.info("Working directory: " + self.args.workingDir)
         self.logger.info("Saving blocks for each iteration? "
                          + ("TRUE" if self.args.saveBlocks else "FALSE"))

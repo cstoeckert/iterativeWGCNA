@@ -15,7 +15,12 @@ dissMatrix <- function(df) {
     1.0 - df
 }
 
-# return power-weighted matrix 
+# add a constant value
+add <- function(df, value) {
+    df + value
+}
+
+# return power-weighted matrix
 powerWeightMatrix <- function(df, power) {
     df^power
 }
@@ -43,9 +48,9 @@ saveObject <- function(obj, objName, file) {
 # calculate degree summary for module genes
 degree <- function(adjMatrix, members, threshold) {
     adjSubset <- adjMatrix[members, members]
-    inDegree = sum(adjSubset >= threshold) / 2 
+    inDegree = sum(adjSubset >= threshold) / 2
     adjSubset <- adjMatrix[members,  !names(adjMatrix) %in% members]
-    outDegree <- sum(adjSubset >= threshold) 
+    outDegree <- sum(adjSubset >= threshold)
     list(kIn=inDegree, kOut=outDegree)
 }
 
@@ -84,6 +89,7 @@ removeUnclassified <- function(expr, membership) {
     classified = membership != "UNCLASSIFIED"
     expr[classified, ]
 }
+
 
 
 """

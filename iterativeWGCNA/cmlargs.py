@@ -66,7 +66,7 @@ def helpEpilog():
 ------------------------------------------------------
 Input File Format
 ------------------------------------------------------
-iterativeWGCNA expects a tab-delimited text file containing 
+iterativeWGCNA expects a tab-delimited text file containing
 gene expression data arranged such that there is one
 row per gene and one column per sample.  The first column
 should contain unique gene identifiers.  For example:
@@ -80,7 +80,7 @@ Phtf2    60    1000    1600
 WGCNA Parameters
 ------------------------------------------------------
 iterativeWGCNA can accept any parameter valid for the WGCNA
-blockwiseModules function.  
+blockwiseModules function.
 
 See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
 
@@ -229,6 +229,13 @@ def parse_summary_command_line_args():
     parser.add_argument('--signed',
                         help="generate signed adjacency matrix?",
                         action='store_true')
+
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.80,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
 
     parser.add_argument('--enableWGCNAThreads',
                         help="enable WGCNA to use threading;\nsee WGCNA manual",

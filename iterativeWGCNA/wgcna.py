@@ -5,63 +5,30 @@ wgcna functions
 '''
 
 import logging
-from argparse import Namespace
 import rpy2.robjects as ro
 from .r.imports import base, wgcna, rsnippets, stats
+from .r.manager import RManager
 
-class WgcnaManager(object):
+class WgcnaManager(RManager):
     '''
     wrappers for running WGCNA functions
+    an extension of the RManager
     '''
     def __init__(self, data, params):
-        self.data = data
-        self.params = params
-        #if type(params) == Namespace:
-        #     self.params = vars(params)
-        #else:
-        self.params = self.params
-            
+        RManager.__init__(self, data, params)
+        self.logger = logging.getLogger('iterativeWGCNA.WgcnaManager')
         self.adjacencyMatrix = None
         self.TOM = None
         self.dissimilarityMatrix = None
         self.geneTree = None
-        self.logger = logging.getLogger('iterativeWGCNA.WgcnaManager')
         return None
-
-
-    def update_parameters(self, params):
-        '''
-        update/replace all parameters
-        '''
-        self.params = params
-
-
-    def set_parameter(self, name, value):
-        '''
-        add or update a single parameter
-        '''
-        self.params[name] = value
-
-
-    def remove_parameter(self, name):
-        '''
-        remove named parameter
-        '''
-        del self.params[name]
-
-
-    def __transpose_data(self):
-        '''
-        transpose the data frame (required for some WGCNA functions)
-        '''
-        return base().t(self.data)
 
 
     def blockwise_modules(self):
         '''
         run blockwise WGCNA
         '''
-        self.params['datExpr'] = self.__transpose_data()
+        self.params['datExpr'] = self.transpose_data()
         blocks = wgcna().blockwiseModules(**self.params)
         self.collect_garbage()
         return blocks
@@ -87,8 +54,8 @@ class WgcnaManager(object):
             adjParams['type'] = 'signed'
         else:
             adjParams['type'] = 'unsigned'
-        adjParams['datExpr'] = self.__transpose_data()
-        
+        adjParams['datExpr'] = self.transpose_data()
+
         self.adjacencyMatrix = wgcna().adjacency(**adjParams)
         self.collect_garbage()
         if removeNegatives:
@@ -97,7 +64,6 @@ class WgcnaManager(object):
         if removeSelfReferences:
             self.adjacencyMatrix = rsnippets.diag(self.adjacencyMatrix, 0)
 
-            
 
     def TOM_dist(self):
         '''
@@ -113,8 +79,9 @@ class WgcnaManager(object):
         '''
         funcParams = {}
         funcParams['power'] = self.params['power'] if 'power' in self.params else 6
-        funcParams['datExpr'] = self.__transpose_data()
+        funcParams['datExpr'] = self.transpose_data()
         self.TOM = wgcna().TOMsimilarityFromExpr(**funcParams)
+        self.collect_garbage()
 
 
     def plot_network_heatmap(self, genes, title="Network Heatmap", useTOM=False):
@@ -129,7 +96,7 @@ class WgcnaManager(object):
         funcParams['networkType'] = self.params['networkType'] \
           if 'networkType' in self.params else 'unsigned'
         funcParams['main'] = title
-        funcParams['datExpr'] = self.__transpose_data()
+        funcParams['datExpr'] = self.transpose_data()
         funcParams['plotGenes'] = ro.StrVector(genes)
         funcParams['useTOM'] = useTOM
 
@@ -177,7 +144,7 @@ class WgcnaManager(object):
         plots an eigengene network
         '''
         funcParams = {}
-        funcParams['multiME'] = base().as_data_frame(self.__transpose_data())
+        funcParams['multiME'] = base().as_data_frame(self.transpose_data())
         funcParams['setLabels'] = ''
         funcParams['marDendro'] = ro.IntVector([0, 4, 1, 2])
         funcParams['marHeatmap'] = ro.IntVector([3, 4, 1, 2])

@@ -18,7 +18,8 @@ from collections import OrderedDict
 import rpy2.robjects as ro
 
 from .wgcna import WgcnaManager
-from .r.imports import grdevices, base, rsnippets
+from .r.manager import RManager
+from .r.imports import grdevices, base, rsnippets, graphics, stats
 
 from .eigengenes import Eigengenes
 
@@ -101,13 +102,12 @@ class Network(object):
         # when membership is loaded from file, modules and classified
         # genes are determined as well
         self.__load_membership_from_file()
-        self.kME = self.__load_kme_from_file()
+        self.__load_kme_from_file()
 
         self.eigengenes = Eigengenes()
         self.eigengenes.load_matrix_from_file("eigengenes-final.txt")
 
         self.__initialize_module_properties()
-        self.logger.debug(self.modules)
 
         self.__assign_colors()
         self.__generate_weighted_adjacency()
@@ -167,19 +167,55 @@ class Network(object):
         '''
         generate summare info for the specified module
         '''
-        self.calculate_degree_modularity(module)
-
         self.__plot_module_overview(module)
-        self.__plot_module_kME(module)
 
 
     def __plot_module_overview(self, module):
         '''
         plot heatmap, dendrogram, and eigengene
         '''
+        grdevices().pdf(module + "-summary.pdf")
+        self.__plot_module_eigengene(module)
+        self.__plot_module_kME(module)
+        self.__plot_module_heatmap(module)
+        grdevices().dev_off()
+
+
+    def __plot_module_heatmap(self, module):
+        '''
+        plot module heatmap
+        '''
+
         members = self.__get_module_members(module)
-        eigengene = self.eigengenes.get_module_eigengene(module)
         expression = self.profiles.gene_expression(members)
+        manager = RManager(expression, None)
+        manager.plot_heatmap()
+
+
+    def __plot_module_eigengene(self, module):
+        '''
+        barchart illustrating module eigengene
+        '''
+        eigengene = self.eigengenes.get_module_eigengene(module)
+
+        params = {}
+        params['height'] = base().as_numeric(eigengene)
+
+        limit = max(abs(base().max(eigengene)[0]), abs(base().min(eigengene)[0]))
+        ylim = [-1 * limit, limit]
+        params['ylim'] = ro.IntVector(ylim)
+
+        colors = ["red" if e[0] > 0 else "blue" for e in eigengene]
+        params['col'] = ro.StrVector(colors)
+
+        params['border'] = ro.NA_Logical
+        params['las'] = 2
+        params['names.arg'] = ro.StrVector(self.eigengenes.samples())
+        params['cex.names'] = 0.6
+        params['main'] = "Eigengene: " + module
+        manager = RManager(eigengene, params)
+        manager.barchart()
+
 
 
     def __plot_module_kME(self, module):
@@ -187,8 +223,16 @@ class Network(object):
         plots module eigengene connectivity (kME)
         '''
         members = self.__get_module_members(module)
-        kME =  [kME for gene, kME in self.kME.items() if gene in members]
-        
+        kME = [kME for gene, kME in self.kME.items() if gene in members]
+        self.logger.debug(kME)
+        self.logger.debug(members)
+        self.logger.debug(self.kME)
+        manager = RManager(kME, None)
+        manager.histogram(self.args.wgcnaParameters['minKMEtoStay'],
+                          {'main':"Member kME: " + module,
+                           'xlab': "Eigengene Connectivity (kME)"})
+
+
     def __generate_random_color(self, colors):
         '''
         generate a random color
@@ -284,7 +328,7 @@ class Network(object):
         weighted graph viz and to simply
         calc of in/out degree
         '''
-        self.logger.debug(self.args)
+
         manager = WgcnaManager(self.profiles.gene_expression(self.classifiedGenes),
                                self.args.wgcnaParameters)
         manager.adjacency(True, True, True) # signed, but filter negatives & self-refs

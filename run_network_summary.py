@@ -26,6 +26,7 @@ def add_wgcna_params(args):
     '''
     args.wgcnaParameters = {}
     args.wgcnaParameters['power'] = args.power
+    args.wgcnaParameters['minKMEtoStay'] = args.minKMEtoStay
     args.wgcnaParameters['type'] = 'signed' if args.signed \
                                    else 'unsigned'
     return args

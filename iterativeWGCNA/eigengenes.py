@@ -27,6 +27,13 @@ class Eigengenes(object):
         self.matrix = rsnippets.extractEigengenes(iteration, blocks, samples)
 
 
+    def samples(self):
+        '''
+        return sample names
+        '''
+        return self.matrix.names
+
+
     def nrows(self):
         '''
         wrapper for returning number of rows in
