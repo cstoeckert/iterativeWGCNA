@@ -90,6 +90,9 @@ removeUnclassified <- function(expr, membership) {
     expr[classified, ]
 }
 
+BlWhRed <- function() {
+    colorRampPalette(c("blue", "white", "red"))(100)
+}
 
 
 """
