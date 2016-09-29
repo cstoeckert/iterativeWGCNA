@@ -6,7 +6,7 @@ R functions
 
 import logging
 import rpy2.robjects as ro
-from .imports import base, pheatmap, graphics, rsnippets
+from .imports import base, pheatmap, graphics, rsnippets, grdevices
 
 class RManager(object):
     '''
@@ -74,14 +74,12 @@ class RManager(object):
         return self.data.names
 
 
-    def plot_heatmap(self, clusterCols=False, params=None):
+    def heatmap(self, clusterCols=False, params=None):
         '''
         plot a heatmap with options specified in params
         (see pheatmap documentation for all options)
         '''
-        if params is not None:
-            self.params.update(params)
-
+     
         self.params['mat'] = base().as_matrix(self.log2())
         self.params['border'] = ro.NA_Logical
         self.params['cluster_cols'] = clusterCols
@@ -90,7 +88,13 @@ class RManager(object):
         self.params['clustering_distance_rows'] = 'correlation'
         self.params['show_rownames'] = True if self.data.nrow <= 50 else False
         self.params['scale'] = 'row'
+        self.params['color'] = rsnippets.BlWhRed()
+
+        if params is not None:
+            self.params.update(params)
+
         pheatmap().pheatmap(**self.params)
+
 
 
     def barchart(self, params=None):
@@ -109,13 +113,12 @@ class RManager(object):
         '''
         plot histogram with vline at x=vline
         '''
+        self.params['x'] = ro.FloatVector(self.data)
+
         if params is not None:
             self.params.update(params)
 
-        self.logger.debug(self.data)
-        graphics().hist(ro.FloatVector(self.data), main='test')
-#        graphics().hist(ro.FloatVector(self.data), breaks=base().seq(0,1,0.1),
- #                       **self.params)
+        graphics().hist(**self.params)
 
         if vline is not None:
             lineParams = {'v': vline, 'col': 'red'}
