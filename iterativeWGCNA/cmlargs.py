@@ -162,6 +162,7 @@ def parse_command_line_args():
 
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
+    args.generateNetworkSummary = 'all' # generate all summaries
     # set edge weight to the minKME
     args.edgeWeight = args.wgcnaParameters['minKMEtoStay']
 
