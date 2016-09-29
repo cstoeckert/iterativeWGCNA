@@ -101,8 +101,8 @@ class Network(object):
 
         # when membership is loaded from file, modules and classified
         # genes are determined as well
-        self.__load_membership_from_file()
-        self.__load_kme_from_file()
+        self.__load_membership_from_file(self.args.prePruning)
+        self.__load_kme_from_file(self.args.prePruning)
 
         self.eigengenes = Eigengenes()
         self.eigengenes.load_matrix_from_file("eigengenes-final.txt")
@@ -113,13 +113,15 @@ class Network(object):
         self.__generate_weighted_adjacency()
 
 
-    def __load_membership_from_file(self):
+    def __load_membership_from_file(self, prePruned):
         '''
         loads membership assignments from file
         and assembles list of classified genes
         and determines list of unique modules
         '''
-        membership = ro.DataFrame.from_csvfile("membership.txt", sep='\t',
+        fileName = "pre-pruning-membership.txt" if prePruned \
+                   else "membership.txt"
+        membership = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                                header=True, row_names=1, as_is=True)
 
         finalIndex = membership.names.index('final')
@@ -140,11 +142,13 @@ class Network(object):
         self.modules = list(set(self.modules)) # gets unique list of modules
 
 
-    def __load_kme_from_file(self):
+    def __load_kme_from_file(self, prePruned):
         '''
         loads kME to assigned module from file
         '''
-        kME = ro.DataFrame.from_csvfile("eigengene-connectivity.txt", sep='\t',
+        fileName = "pre-pruning-eigengene-connectivity.txt" if prePruned \
+                   else "eigengene-connectivity.txt"
+        kME = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                         header=True, row_names=1, as_is=True)
 
         finalIndex = kME.names.index('final')
@@ -157,7 +161,7 @@ class Network(object):
         '''
         generate summary figs and data
         '''
-        self.plot_eigengene_network()
+        self.__plot_eigengene_overview()
         self.__plot_summary_views()
         self.__summarize_network_modularity()
         self.__write_module_summary()
@@ -175,13 +179,13 @@ class Network(object):
         plot heatmap, dendrogram, and eigengene
         '''
         grdevices().pdf(module + "-summary.pdf")
-        self.__plot_module_eigengene(module)
-        self.__plot_module_kME(module)
-        self.__plot_module_heatmap(module)
+        self.plot_module_eigengene(module)
+        self.plot_module_kME(module)
+        self.plot_module_heatmap(module)
         grdevices().dev_off()
 
 
-    def __plot_module_heatmap(self, module):
+    def plot_module_heatmap(self, module):
         '''
         plot module heatmap
         '''
@@ -189,10 +193,10 @@ class Network(object):
         members = self.__get_module_members(module)
         expression = self.profiles.gene_expression(members)
         manager = RManager(expression, None)
-        manager.plot_heatmap()
+        manager.heatmap()
 
 
-    def __plot_module_eigengene(self, module):
+    def plot_module_eigengene(self, module):
         '''
         barchart illustrating module eigengene
         '''
@@ -218,19 +222,19 @@ class Network(object):
 
 
 
-    def __plot_module_kME(self, module):
+    def plot_module_kME(self, module):
         '''
         plots module eigengene connectivity (kME)
         '''
         members = self.__get_module_members(module)
         kME = [kME for gene, kME in self.kME.items() if gene in members]
-        self.logger.debug(kME)
-        self.logger.debug(members)
-        self.logger.debug(self.kME)
+
         manager = RManager(kME, None)
         manager.histogram(self.args.wgcnaParameters['minKMEtoStay'],
                           {'main':"Member kME: " + module,
-                           'xlab': "Eigengene Connectivity (kME)"})
+                           'xlab': "Eigengene Connectivity (kME)",
+                           'ylab': "N Genes",
+                           'breaks': base().seq(0, 1, 0.1)})
 
 
     def __generate_random_color(self, colors):
@@ -274,15 +278,31 @@ class Network(object):
         return colors
 
 
+    def __plot_eigengene_overview(self):
+        '''
+        plots eigengene graphs to single pdf
+        '''
+        grdevices().pdf("eigengene-overview.pdf")
+        self.plot_eigengene_network()
+        self.plot_eigengene_heatmap()
+        grdevices().dev_off()
+
+ 
     def plot_eigengene_network(self):
         '''
         wrapper for plotting the eigengene network to pdf
         '''
-        grdevices().pdf("eigengene-network.pdf")
         manager = WgcnaManager(self.eigengenes.matrix, None)
         manager.plot_eigengene_network()
-        grdevices().dev_off()
 
+
+    def plot_eigengene_heatmap(self):
+        '''
+        plot a heatmap of the eigengenes
+        '''
+        manager = RManager(self.eigengenes.matrix, None)
+        # manager.heatmap(params={'scale':'none'})
+        manager.heatmap()
 
     def plot_network_summary(self, genes, title, filename):
         '''
