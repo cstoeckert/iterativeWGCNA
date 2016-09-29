@@ -259,6 +259,11 @@ def parse_summary_command_line_args():
                         + "expects full results from an iterativeWGCNA"
                         + "run in output directory")
 
+
+    parser.add_argument('--prePruning',
+                        help="for summarizing modules; generate pre-pruned overview?",
+                        action='store_true')
+
     parser.add_argument('-e', '--edgeWeight',
                         metavar='<min edge weight>',
                         default=0.5,
