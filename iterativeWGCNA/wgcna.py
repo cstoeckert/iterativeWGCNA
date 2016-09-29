@@ -5,6 +5,7 @@ wgcna functions
 '''
 
 import logging
+from collections import OrderedDict
 import rpy2.robjects as ro
 from .r.imports import base, wgcna, rsnippets, stats
 from .r.manager import RManager
@@ -21,7 +22,18 @@ class WgcnaManager(RManager):
         self.TOM = None
         self.dissimilarityMatrix = None
         self.geneTree = None
+        self.moduleColors = None
+ 
         return None
+
+
+    def set_module_colors(self, modules):
+        '''
+        set module colors from dict of module properties
+        expects a key -> value module->'color':color
+        '''
+        self.moduleColors = OrderedDict((module, values['color']) \
+                                            for module, values in modules.items())
 
 
     def blockwise_modules(self):
@@ -64,6 +76,8 @@ class WgcnaManager(RManager):
         if removeSelfReferences:
             self.adjacencyMatrix = rsnippets.diag(self.adjacencyMatrix, 0)
 
+        self.collect_garbage()
+
 
     def TOM_dist(self):
         '''
@@ -84,26 +98,34 @@ class WgcnaManager(RManager):
         self.collect_garbage()
 
 
-    def plot_network_heatmap(self, moduleColors, title, useTOM=False):
+    def plot_network_heatmap(self, geneColors, title, useTOM=False):
         '''
-        wrapper for plotNetworkHeatmap function
-        by default plots correlation, set useTOM to true
-        to plot topological overlap instead
+        plot network heatmap
+        recapitulates WGCNA plotNetworkOverview to work around
+        cutree issues
+        uses pheatmap
         '''
 
-        if useTOM:
-            self.TOM_similarity_from_expr()
-            self.dissimilarityMatrix = rsnippets.dissMatrix(self.TOM)
+        # TODO fix useTOM option for drawing with pheatmap and use of similarity
+        # instead of dissimilarity
+
+        # if useTOM:
+            # self.TOM_similarity_from_expr()
+            # self.dissimilarityMatrix = rsnippets.dissMatrix(self.TOM)
 			# raising TOM to power of 7 recommended by WGCNA documentation
-            self.dissimilarityMatrix = rsnippets.powerWeightMatrix(self.TOM, 7)
-        else:
-            self.adjacency(signed=True)
-            self.dissimilarityMatrix = rsnippets.dissMatrix(self.adjacencyMatrix)
+            # self.dissimilarityMatrix = rsnippets.powerWeightMatrix(self.TOM, 7)
+        #else:
 
-		self.garbage_collection()
-		
-		managaer = RManager(self.dissimilarityMatrix, None)
-		manager.heatmap(clusterCols=True, params={'scale': 'none'})
+        self.adjacency(signed=True)
+
+        annotation = self.heatmap_annotation_data_frame("Module", geneColors)
+        annotationKey = self.heatmap_annotation_key("Module", self.moduleColors)
+
+        # manager = RManager(self.dissimilarityMatrix, None)
+        self.heatmap(clusterCols=True, params={'scale': 'none',
+                                               'mat':self.adjacencyMatrix,
+                                               'show_colnames':False,
+                                               'color': rsnippets.WhYlRed()})
 
 
     def generate_gene_tree(self):

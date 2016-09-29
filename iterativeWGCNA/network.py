@@ -274,7 +274,8 @@ class Network(object):
         '''
         retrieve colors for specified gene list
         '''
-        colors = [color for gene, color in self.geneColors.items() if gene in targetGenes]
+        colors = OrderedDict((gene, color) for gene, color in self.geneColors.items() \
+                                 if gene in targetGenes)
         return colors
 
 
@@ -312,6 +313,7 @@ class Network(object):
         expression = self.profiles.gene_expression(genes)
         colors = self.get_gene_colors(genes)
         manager = WgcnaManager(expression, self.args.wgcnaParameters)
+        manager.set_module_colors(self.modules)
         grdevices().pdf(filename)
         manager.plot_network_heatmap(colors, title) # plot_network_overview(colors, title)
         grdevices().dev_off()

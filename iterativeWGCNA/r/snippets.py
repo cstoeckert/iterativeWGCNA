@@ -90,10 +90,20 @@ removeUnclassified <- function(expr, membership) {
     expr[classified, ]
 }
 
+# blue, white, red color scale
 BlWhRed <- function() {
     colorRampPalette(c("blue", "white", "red"))(100)
 }
 
+# white, yellow, red color scale
+WhYlRed <- function() {
+   colorRampPalette(c("white", "yellow", "red"))(100)
+}
+
+# create color scale by passing a string vector of colors
+colorScale <- function(colors) {
+   colorRampPalette(colors)(100)
+}
 
 """
 

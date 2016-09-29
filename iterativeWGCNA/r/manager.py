@@ -5,8 +5,10 @@ R functions
 '''
 
 import logging
+from collections import OrderedDict
 import rpy2.robjects as ro
-from .imports import base, pheatmap, graphics, rsnippets, grdevices
+# import rpy2.rlike.container as rlc
+from .imports import base, pheatmap, graphics, rsnippets
 
 class RManager(object):
     '''
@@ -72,6 +74,30 @@ class RManager(object):
         (usually samples)
         '''
         return self.data.names
+
+
+    def heatmap_annotation_data_frame(self, categories, annotation):
+        '''
+        takes a dict of gene->value and creates a data frame
+        data frame
+        assume annotation is an ordered dict
+        updates column names to names
+        '''
+        df = ro.DataFrame(annotation)
+        df.colnames = ro.StrVector(categories)
+        return df
+
+
+    def heatmap_annotation_key(self, name, colors):
+        '''
+        generates data frame for color key for the annotation
+        from a dict
+        '''
+        keyColors = ro.StrVector([c for c in colors.values()])
+        keyColors.names = [n for n in colors]
+        key = OrderedDict()
+        key['Modules'] = keyColors
+        return ro.ListVector(key)
 
 
     def heatmap(self, clusterCols=False, params=None):
