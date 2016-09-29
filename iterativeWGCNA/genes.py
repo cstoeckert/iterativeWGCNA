@@ -188,14 +188,16 @@ class Genes(object):
             self.__update_module_kME(m, moduleEigengene, genes)
 
 
-    def __write_kME(self):
+    def __write_kME(self, isPruned):
         '''
         writes eigengene connectivity (kME)
         to a file
         '''
         df = ro.DataFrame(self.__extract_kME())
         df.rownames = (self.iteration)
-        fileName = 'eigengene-connectivity.txt'
+        fileName = 'eigengene-connectivity.txt' \
+                   if isPruned else 'pre-pruning-eigengene-connectivity.txt'
+
         write_data_frame(df, fileName, 'Iteration')
         return None
 
@@ -206,8 +208,7 @@ class Genes(object):
         to files
         '''
         self.__write_modules(isPruned)
-        if isPruned:
-            self.__write_kME()
+        self.__write_kME(isPruned)
         return None
 
 
