@@ -84,23 +84,26 @@ class WgcnaManager(RManager):
         self.collect_garbage()
 
 
-    def plot_network_heatmap(self, genes, title="Network Heatmap", useTOM=False):
+    def plot_network_heatmap(self, moduleColors, title, useTOM=False):
         '''
         wrapper for plotNetworkHeatmap function
         by default plots correlation, set useTOM to true
         to plot topological overlap instead
         '''
 
-        funcParams = {}
-        funcParams['power'] = self.params['power'] if 'power' in self.params else 6
-        funcParams['networkType'] = self.params['networkType'] \
-          if 'networkType' in self.params else 'unsigned'
-        funcParams['main'] = title
-        funcParams['datExpr'] = self.transpose_data()
-        funcParams['plotGenes'] = ro.StrVector(genes)
-        funcParams['useTOM'] = useTOM
+        if useTOM:
+            self.TOM_similarity_from_expr()
+            self.dissimilarityMatrix = rsnippets.dissMatrix(self.TOM)
+			# raising TOM to power of 7 recommended by WGCNA documentation
+            self.dissimilarityMatrix = rsnippets.powerWeightMatrix(self.TOM, 7)
+        else:
+            self.adjacency(signed=True)
+            self.dissimilarityMatrix = rsnippets.dissMatrix(self.adjacencyMatrix)
 
-        wgcna().plotNetworkHeatmap(**funcParams)
+		self.garbage_collection()
+		
+		managaer = RManager(self.dissimilarityMatrix, None)
+		manager.heatmap(clusterCols=True, params={'scale': 'none'})
 
 
     def generate_gene_tree(self):
@@ -130,12 +133,12 @@ class WgcnaManager(RManager):
         # self.dissimilarityMatrix = rsnippets.diag(self.dissimilarityMatrix, ro.NA_Integer)
         self.generate_gene_tree()
 
-        funcParams = {}
-        funcParams['dissim'] = self.dissimilarityMatrix
-        funcParams['dendro'] = self.geneTree
-        funcParams['Colors'] = moduleColors
-        funcParams['main'] = title
-        wgcna().TOMplot(**funcParams)
+        params = {}
+        params['dissim'] = self.dissimilarityMatrix
+        params['dendro'] = self.geneTree
+        params['Colors'] = moduleColors
+        params['main'] = title
+        wgcna().TOMplot(**params)
 
 
     def plot_eigengene_network(self):
@@ -143,15 +146,15 @@ class WgcnaManager(RManager):
         wrapper for plotEigengeneNetworks function
         plots an eigengene network
         '''
-        funcParams = {}
-        funcParams['multiME'] = base().as_data_frame(self.transpose_data())
-        funcParams['setLabels'] = ''
-        funcParams['marDendro'] = ro.IntVector([0, 4, 1, 2])
-        funcParams['marHeatmap'] = ro.IntVector([3, 4, 1, 2])
-        funcParams['cex.lab'] = 0.8
-        funcParams['xLabelsAngle'] = 90
-        funcParams['colorLabels'] = False
-        funcParams['signed'] = True
+        params = {}
+        params['multiME'] = base().as_data_frame(self.transpose_data())
+        params['setLabels'] = ''
+        params['marDendro'] = ro.IntVector([0, 4, 1, 2])
+        params['marHeatmap'] = ro.IntVector([3, 4, 1, 2])
+        params['cex.lab'] = 0.8
+        params['xLabelsAngle'] = 90
+        params['colorLabels'] = False
+        params['signed'] = True
 
-        wgcna().plotEigengeneNetworks(**funcParams)
+        wgcna().plotEigengeneNetworks(**params)
 

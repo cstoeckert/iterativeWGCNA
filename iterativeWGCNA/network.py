@@ -138,7 +138,7 @@ class Network(object):
                 if 'p' not in module:
                     self.logger.debug("Module: " + module + "; Gene: " + g)
                 self.classifiedGenes.append(g)
-        # self.logger.debug(self.modules)
+
         self.modules = list(set(self.modules)) # gets unique list of modules
 
 
@@ -313,7 +313,7 @@ class Network(object):
         colors = self.get_gene_colors(genes)
         manager = WgcnaManager(expression, self.args.wgcnaParameters)
         grdevices().pdf(filename)
-        manager.plot_network_overview(colors, title)
+        manager.plot_network_heatmap(colors, title) # plot_network_overview(colors, title)
         grdevices().dev_off()
 
 
