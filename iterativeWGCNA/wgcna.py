@@ -23,14 +23,14 @@ class WgcnaManager(RManager):
         self.dissimilarityMatrix = None
         self.geneTree = None
         self.moduleColors = None
- 
+
         return None
 
 
     def set_module_colors(self, modules):
         '''
         set module colors from dict of module properties
-        expects a key -> value module->'color':color
+        expects dict to have a 'color' sub-dict
         '''
         self.moduleColors = OrderedDict((module, values['color']) \
                                             for module, values in modules.items())
@@ -98,7 +98,7 @@ class WgcnaManager(RManager):
         self.collect_garbage()
 
 
-    def plot_network_heatmap(self, geneColors, title, useTOM=False):
+    def plot_network_heatmap(self, membership, title, useTOM=False):
         '''
         plot network heatmap
         recapitulates WGCNA plotNetworkOverview to work around
@@ -118,14 +118,16 @@ class WgcnaManager(RManager):
 
         self.adjacency(signed=True)
 
-        annotation = self.heatmap_annotation_data_frame("Module", geneColors)
-        annotationKey = self.heatmap_annotation_key("Module", self.moduleColors)
-
+        annotation = self.heatmap_annotation_data_frame(['Module'], membership)
+        annotationKey = self.heatmap_annotation_key('Module', self.moduleColors)
         # manager = RManager(self.dissimilarityMatrix, None)
         self.heatmap(clusterCols=True, params={'scale': 'none',
-                                               'mat':self.adjacencyMatrix,
-                                               'show_colnames':False,
-                                               'color': rsnippets.WhYlRed()})
+                                               'mat': self.adjacencyMatrix,
+                                               'show_colnames': False,
+                                               'color': rsnippets.WhYlRed(),
+                                               'annotation_col': annotation,
+                                               'annotation_row': annotation,
+                                               'annotation_colors': annotationKey})
 
 
     def generate_gene_tree(self):

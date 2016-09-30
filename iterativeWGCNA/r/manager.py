@@ -9,6 +9,7 @@ from collections import OrderedDict
 import rpy2.robjects as ro
 # import rpy2.rlike.container as rlc
 from .imports import base, pheatmap, graphics, rsnippets
+from iterativeWGCNA.io.utils import write_data_frame
 
 class RManager(object):
     '''
@@ -83,8 +84,9 @@ class RManager(object):
         assume annotation is an ordered dict
         updates column names to names
         '''
-        df = ro.DataFrame(annotation)
+        df = base().as_data_frame(base().t(ro.DataFrame(annotation)))
         df.colnames = ro.StrVector(categories)
+      
         return df
 
 
@@ -94,9 +96,10 @@ class RManager(object):
         from a dict
         '''
         keyColors = ro.StrVector([c for c in colors.values()])
-        keyColors.names = [n for n in colors]
+        keyColors.names = colors.keys()
         key = OrderedDict()
-        key['Modules'] = keyColors
+        key[name] = keyColors
+
         return ro.ListVector(key)
 
 
@@ -105,7 +108,6 @@ class RManager(object):
         plot a heatmap with options specified in params
         (see pheatmap documentation for all options)
         '''
-     
         self.params['mat'] = base().as_matrix(self.log2())
         self.params['border'] = ro.NA_Logical
         self.params['cluster_cols'] = clusterCols

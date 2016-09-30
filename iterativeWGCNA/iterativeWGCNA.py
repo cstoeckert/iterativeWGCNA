@@ -35,7 +35,7 @@ class IterativeWGCNA(object):
         self.__initialize_log(summaryOnly)
         self.logger.info(strftime("%c"))
 
-        self.__initialize_R()
+        self.__initialize_R(summaryOnly)
         if not summaryOnly:
             self.__log_parameters()
 
@@ -273,7 +273,7 @@ class IterativeWGCNA(object):
             sys.exit(1)
 
 
-    def __initialize_R(self):
+    def __initialize_R(self, summaryOnly=False):
         '''
         initialize R workspace and logs
         '''
@@ -284,7 +284,9 @@ class IterativeWGCNA(object):
         ro.r['options'](warn=-1)
 
         # r log
-        rLogger = base().file('iterativeWGCNA-R.log', open='wt')
+        logFile = 'summarize-network-R.log' if summaryOnly \
+          else 'iterativeWGCNA-R.log'
+        rLogger = base().file(logFile, open='wt')
         base().sink(rLogger, type=base().c('output', 'message'))
 
         if self.args.enableWGCNAThreads:
@@ -296,7 +298,7 @@ class IterativeWGCNA(object):
         initialize log by setting path and file format
         '''
         if summaryLog:
-            logName = 'networkSummary.log'
+            logName = 'summarize-network.log'
         else:
             logName = 'iterativeWGCNA.log'
         logging.basicConfig(filename=self.args.workingDir + '/' + logName,

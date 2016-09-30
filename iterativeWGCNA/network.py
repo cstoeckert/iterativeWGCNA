@@ -12,14 +12,14 @@ from __future__ import with_statement
 
 import logging
 
-from random import randint
 from collections import OrderedDict
 
 import rpy2.robjects as ro
 
+from .colors import Colors
 from .wgcna import WgcnaManager
 from .r.manager import RManager
-from .r.imports import grdevices, base, rsnippets, graphics, stats
+from .r.imports import grdevices, base, rsnippets
 
 from .eigengenes import Eigengenes
 
@@ -221,7 +221,6 @@ class Network(object):
         manager.barchart()
 
 
-
     def plot_module_kME(self, module):
         '''
         plots module eigengene connectivity (kME)
@@ -237,26 +236,19 @@ class Network(object):
                            'breaks': base().seq(0, 1, 0.1)})
 
 
-    def __generate_random_color(self, colors):
-        '''
-        generate a random color
-        '''
-        # TODO probably a better way to do this, but...
-        # since we may need > 50 colors, random it is
-        color = '#' + '%06X' % randint(0, 0xFFFFFF)
-        while color in colors:
-            color = '#' + '%06X' % randint(0, 0xFFFFFF)
-        return color
-
 
     def __generate_module_colors(self):
         '''
         generate module color map
+        using standard colors for first
+        few modules then random for anything more than first 25
         '''
-        colors = []
+
+        colors = Colors()
+        n = 0 # counter for module num
         for m in self.modules:
-            color = self.__generate_random_color(colors)
-            colors.append(color)
+            n = n + 1
+            color = colors.assign_color(n)
             self.modules[m]['color'] = color
 
         self.modules["UNCLASSIFIED"]['color'] = '#D3D3D3'
@@ -279,6 +271,15 @@ class Network(object):
         return colors
 
 
+    def get_gene_membership(self, targetGenes):
+        '''
+        retrieve membership for specified gene list
+        '''
+        colors = OrderedDict((gene, membership) for gene, membership in self.membership.items() \
+                                 if gene in targetGenes)
+        return colors
+
+
     def __plot_eigengene_overview(self):
         '''
         plots eigengene graphs to single pdf
@@ -288,7 +289,7 @@ class Network(object):
         self.plot_eigengene_heatmap()
         grdevices().dev_off()
 
- 
+
     def plot_eigengene_network(self):
         '''
         wrapper for plotting the eigengene network to pdf
@@ -305,17 +306,21 @@ class Network(object):
         # manager.heatmap(params={'scale':'none'})
         manager.heatmap()
 
+        
     def plot_network_summary(self, genes, title, filename):
         '''
         wrapper for WGCNA summary network view (heatmap + dendrogram)
         '''
 
         expression = self.profiles.gene_expression(genes)
-        colors = self.get_gene_colors(genes)
+        membership = self.get_gene_membership(genes)
+        # colors = self.get_gene_colors(genes)
+        
         manager = WgcnaManager(expression, self.args.wgcnaParameters)
         manager.set_module_colors(self.modules)
+        
         grdevices().pdf(filename)
-        manager.plot_network_heatmap(colors, title) # plot_network_overview(colors, title)
+        manager.plot_network_heatmap(membership, title) # plot_network_overview(colors, title)
         grdevices().dev_off()
 
 
