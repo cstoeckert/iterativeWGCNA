@@ -259,7 +259,7 @@ class IterativeWGCNA(object):
         '''
         generates the unique label for the iteration
         '''
-        self.iteration = 'p' + str(self.passCount) + '_iter_' + str(self.iterationCount)
+        self.iteration = 'p' + str(self.passCount) + '_i' + str(self.iterationCount)
 
 
     def __load_expression_profiles(self):
