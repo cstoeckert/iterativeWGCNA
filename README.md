@@ -8,9 +8,9 @@ iterativeWGCNA provides an extension and Python wrapper for the R program [Weigh
 
 1. [Setup and Installation](#setup)
 2. [Usage](#usage)
-#### A. [Run iterativeWGCNA](#run)
-#### B. [Summarize results](#summarize)
-### 3. [Troubleshooting](#troubleshooting)
+A. [Run iterativeWGCNA](#run)
+B. [Summarize results](#summarize)
+3. [Troubleshooting](#troubleshooting)
 
 <a name="setup"></a>
 ## Setup and Installation
