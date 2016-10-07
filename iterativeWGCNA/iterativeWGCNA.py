@@ -330,7 +330,7 @@ class IterativeWGCNA(object):
         self.logger.info("Saving blocks for each iteration? "
                          + ("TRUE" if self.args.saveBlocks else "FALSE"))
         self.logger.info("Merging final modules if cutHeight <= "
-                         + str(self.args.wgcnaParameters['mergeCutHeight'])
+                         + str(self.args.wgcnaParameters['mergeCutHeight']))
         self.logger.info("Allowing WGCNA Threads? "
                          + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
         self.logger.info("Running WGCNA with the following params:")
