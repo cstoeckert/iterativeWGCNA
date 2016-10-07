@@ -152,14 +152,6 @@ def parse_command_line_args():
                         help="save WGNCA blockwise modules for each iteration",
                         action='store_true')
 
-    parser.add_argument('--moduleMergeCutHeight',
-                        help="cut height (dissimilarity threshold) for"
-                        + " merging close modules after algorithm convergence;"
-                        + " must be in the range (0.0, 1.0]",
-                        default=0.05,
-                        metavar='<dissimilarity>',
-                        type=restricted_float)
-
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
     args.generateNetworkSummary = 'all' # generate all summaries
@@ -191,6 +183,9 @@ def set_wgcna_parameter_defaults(params):
         params['reassignThreshold'] = 0.05 # 0.0000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
+    if 'mergeCutHeight' not in params:
+        params['mergeCutHeight'] = 0.15
+
     return params
 
 

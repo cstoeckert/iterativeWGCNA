@@ -207,7 +207,7 @@ class IterativeWGCNA(object):
         self.eigengenes.update_to_subset(modules)
 
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
-                                                         self.args.moduleMergeCutHeight)
+                                                         self.args.wgcnaParameters['mergeCutHeight'])
 
 
     def run_iteration(self, iterationGenes):
@@ -330,7 +330,7 @@ class IterativeWGCNA(object):
         self.logger.info("Saving blocks for each iteration? "
                          + ("TRUE" if self.args.saveBlocks else "FALSE"))
         self.logger.info("Merging final modules if cutHeight <= "
-                         + str(self.args.moduleMergeCutHeight))
+                         + str(self.args.wgcnaParameters['mergeCutHeight'])
         self.logger.info("Allowing WGCNA Threads? "
                          + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
         self.logger.info("Running WGCNA with the following params:")
