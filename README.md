@@ -141,9 +141,16 @@ For example:
 
 sets the maximum block size to 5000 genes, the correlation type to the biweight correlation, and the power-law scaling factor (beta) to 10
 
-> WGCNA's `blockwiseModules` function partitions the gene set into a set of blocks each containing at most `maxBlockSize` genes.  *To run iterativeWGCNA in a single block, set `maxBlockSize` to a value > than the number of genes in your geneset*.
+> WGCNA's `blockwiseModules` function partitions the gene set into a set of blocks each containing at most `maxBlockSize` genes.
 
-If WGCNA parameters are not specified, iterativeWGCNA uses the default WGCNA settings for the blockwiseModules function, except for the following:
+*To run iterativeWGCNA in a single block, set `maxBlockSize` to a value > than the number of genes in your geneset*.
+
+
+> NOTE: for large datasets (>10,000 genes or probes), adjacency and TOM matrix calculations done in a single block may fail due to memory allocation issues 
+
+see the [WGCNA large dataset tutorial, section 2.c.2](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/Tutorials/FemaleLiver-02-networkConstr-blockwise.pdf) for more details
+
+If WGCNA parameters are not specified, iterativeWGCNA uses the default WGCNA settings for the `blockwiseModules` function, except for the following:
 
 ```python
 minModuleSize = 20 # minimum number of genes in a detected module
