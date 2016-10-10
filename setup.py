@@ -11,5 +11,5 @@ setup(name='iterativeWGCNA',
       author_email='allenem@upenn.edu',
       license='GNU',
       packages=['iterativeWGCNA'],
-      install_requires=['rpy2'],
+      install_requires=['rpy2','matplotlib'],
       zip_safe=False)

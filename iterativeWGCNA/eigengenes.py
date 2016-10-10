@@ -27,7 +27,19 @@ class Eigengenes(object):
         self.matrix = rsnippets.extractEigengenes(iteration, blocks, samples)
 
 
+    def samples(self):
+        '''
+        return sample names
+        '''
+        return self.matrix.names
+
+
     def nrows(self):
+        '''
+        wrapper for returning number of rows in
+        the eigengene matrix
+        '''
+
         return self.matrix.nrow
 
 
@@ -70,7 +82,8 @@ class Eigengenes(object):
 
     def equal(self, m1, m2, threshold=0.0):
         '''
-        check if 2 module eigengenes are "equal" (1 - correlation <= threshold)
+        check if 2 module eigengenes are "equivalent"
+        (1 - correlation <= threshold)
         '''
         cor = self.correlation(m1, m2)
         return 1.0 - cor <= threshold

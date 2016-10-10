@@ -16,3 +16,5 @@ flycheck_iWGCNA.py
 *.py~
 *.org
 todo.org~
+
+iterativeWGCNA/.#wgcna.py

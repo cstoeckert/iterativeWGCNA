@@ -8,7 +8,6 @@ and validating command line arguments
 
 import re
 import argparse
-import re
 from os import getcwd
 
 def parameter_list(strValue):
@@ -50,16 +49,24 @@ def restricted_float(x):
     return x
 
 
+def summaryHelpEpilog():
+    '''
+    text for help epilog for
+    summary
+    '''
+    # TODO Help for summarize script
+    return "COMING SOON"
+
 def helpEpilog():
     '''
     text for help epilog
     '''
 
-    inputFileFormatHelp = ''' 
+    inputFileFormatHelp = '''
 ------------------------------------------------------
 Input File Format
 ------------------------------------------------------
-iWGCNA expects a tab-delimited text file containing 
+iterativeWGCNA expects a tab-delimited text file containing
 gene expression data arranged such that there is one
 row per gene and one column per sample.  The first column
 should contain unique gene identifiers.  For example:
@@ -72,8 +79,8 @@ Phtf2    60    1000    1600
 ------------------------------------------------------
 WGCNA Parameters
 ------------------------------------------------------
-iWGCNA can accept any parameter valid for the WGCNA
-blockwiseModules function.  
+iterativeWGCNA can accept any parameter valid for the WGCNA
+blockwiseModules function.
 
 See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules
 
@@ -86,7 +93,7 @@ sets the maximum block size to 5000 genes,
 the correlation type to the biweight correlation,
 and the power-law scaling factor (beta) to 10
 
-If parameters are not specified, iWGCNA uses the default WGCNA settings,
+If parameters are not specified, iterativeWGCNA uses the default WGCNA settings,
 except for the following:
 
 minModuleSize=20
@@ -107,7 +114,7 @@ def parse_command_line_args():
     parse command line args
     '''
 
-    parser = argparse.ArgumentParser(prog='iWGCNA',
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA',
                                      description="perform interative WGCNA analysis",
                                      epilog=helpEpilog(),
                                      formatter_class=argparse.RawTextHelpFormatter)
@@ -145,16 +152,11 @@ def parse_command_line_args():
                         help="save WGNCA blockwise modules for each iteration",
                         action='store_true')
 
-    parser.add_argument('--moduleMergeCutHeight',
-                        help="cut height (dissimilarity threshold) for"
-                        + " merging close modules after algorithm convergence;"
-                        + " must be in the range (0.0, 1.0]",
-                        default=0.05,
-                        metavar='<dissimilarity>',
-                        type=restricted_float)
-
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
+    args.generateNetworkSummary = 'all' # generate all summaries
+    # set edge weight to the minKME
+    args.edgeWeight = args.wgcnaParameters['minKMEtoStay']
 
     return args
 
@@ -169,16 +171,101 @@ def set_wgcna_parameter_defaults(params):
     if params is None:
         params = {}
 
+    if 'networkType' not in params:
+        params['networkType'] = 'signed'
     if 'numericLabels' not in params:
         params['numericLabels'] = True
     if 'minKMEtoStay' not in params:
         params['minKMEtoStay'] = 0.8
     if 'minCoreKME' not in params:
-        params['minCoreKME'] = 0.8
+        params['minCoreKME'] = params['minKMEtoStay']
     if 'minModuleSize' not in params:
         params['minModuleSize'] = 20
     if 'reassignThreshold' not in params:
         params['reassignThreshold'] = 0.05 # 0.0000001 # 1e-6
+    if 'power' not in params:
+        params['power'] = 6
+    if 'mergeCutHeight' not in params:
+        params['mergeCutHeight'] = 0.15
 
     return params
 
+
+def parse_summary_command_line_args():
+    '''
+    parse command line args for summary
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA summary',
+                                     description="summarize results from interative WGCNA analysis",
+                                     epilog=summaryHelpEpilog(),
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--inputFile',
+                        metavar='<gene expression file>',
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+    parser.add_argument('-p', '--power',
+                        metavar='<power law beta>',
+                        help="power law beta for weighting the adjacency matrix",
+                        default=6,
+                        type=int)
+
+    parser.add_argument('--signed',
+                        help="generate signed adjacency matrix?",
+                        action='store_true')
+
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.80,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
+
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
+                        action='store_true')
+
+    parser.add_argument('--generateNetworkSummary',
+                        metavar='<view type>',
+                        choices=['all', 'network', 'input'],
+                        help="generate summary overview of the network (dendrogram & heatmap):\n"
+                        + "network - network comprised only of classified genes\n"
+                        + "input - all genes, with classified highlighted by module assignments\n"
+                        + "all - both views\n"
+                        + "NOTE: all adjacency matrix calculations are\n"
+                        + "done in one block and may fail due to memory allocation\n"
+                        + "issues for large gene-sets")
+
+    parser.add_argument('-s', '--summarizeModule',
+                        metavar='<module name>',
+                        help="generate summary info for specified module;"
+                        + "expects full results from an iterativeWGCNA"
+                        + "run in output directory")
+
+
+    parser.add_argument('--prePruning',
+                        help="for summarizing modules; generate pre-pruned overview?",
+                        action='store_true')
+
+    parser.add_argument('-e', '--edgeWeight',
+                        metavar='<min edge weight>',
+                        default=0.5,
+                        help="min edge weight for network summary; filters for\n"
+                        + "connections supported by a correlation >= threshold",
+                        type=restricted_float)
+
+    return parser.parse_args()

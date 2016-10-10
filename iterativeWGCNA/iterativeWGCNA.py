@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name
-# pylint: disable=unused-import
 # pylint: disable=bare-except
 # pylint: disable=broad-except
 # pylint: disable=too-many-instance-attributes
@@ -18,6 +17,7 @@ import rpy2.robjects as ro
 from .genes import Genes
 from .expression import Expression
 from .eigengenes import Eigengenes
+from .network import Network
 from .wgcna import WgcnaManager
 from .io.utils import create_dir, read_data, warning, transpose_file_contents
 from .r.imports import base, wgcna, rsnippets
@@ -28,34 +28,36 @@ class IterativeWGCNA(object):
     main application
     '''
 
-    def __init__(self, args):
+    def __init__(self, args, summaryOnly=False):
         self.args = args
         create_dir(self.args.workingDir)
-        
-        self.__initialize_log()
+
+        self.__initialize_log(summaryOnly)
         self.logger.info(strftime("%c"))
 
-        self.profiles = None
-        self.genes = None
-        self.eigengenes = Eigengenes()
-      
-        self.passCount = 1
-        self.iterationCount = 1
-        self.iteration = None # unique label for iteration
-
-        self.algorithmConverged = False
-        self.passConverged = False
-
-        self.__initialize_R()
-        self.__log_parameters()
+        self.__initialize_R(summaryOnly)
+        if not summaryOnly:
+            self.__log_parameters()
 
         # load expression data and
         # initialize Genes object
         # to store results
+        self.profiles = None
         self.__load_expression_profiles()
         self.__log_input_data()
 
-        self.genes = Genes(self.profiles)
+        if not summaryOnly:
+            self.genes = None
+            self.eigengenes = Eigengenes()
+            self.modules = None # hash of module name to color for plotting
+
+            self.passCount = 1
+            self.iterationCount = 1
+            self.iteration = None # unique label for iteration
+
+            self.algorithmConverged = False
+            self.passConverged = False
+            self.genes = Genes(self.profiles)
 
 
     def run_pass(self, passGenes):
@@ -70,7 +72,7 @@ class IterativeWGCNA(object):
 
             moduleCount = self.genes.count_modules(iterationGenes)
             classifiedGeneCount = self.genes.count_classified_genes(iterationGenes)
-            
+
             self.write_gene_counts(len(iterationGenes), classifiedGeneCount)
 
             # if there are no residuals
@@ -124,10 +126,20 @@ class IterativeWGCNA(object):
         self.merge_close_modules()
         self.reassign_genes_to_best_fit_module()
 
+        self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
+
         self.genes.write(True)
         self.eigengenes.write(True)
         self.transpose_output_files()
 
+
+    def summarize_results(self):
+        '''
+        generate summary output and graphics
+        '''
+        network = Network(self.args)
+        network.build(self.genes, self.eigengenes)
+        network.summarize_network()
 
 
     def run(self):
@@ -138,6 +150,7 @@ class IterativeWGCNA(object):
 
         try:
             self.run_iterative_wgcna()
+            self.summarize_results()
             self.logger.info('iterativeWGCNA: SUCCESS')
         except Exception:
             if self.logger is not None:
@@ -194,9 +207,7 @@ class IterativeWGCNA(object):
         self.eigengenes.update_to_subset(modules)
 
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
-                                                         self.args.moduleMergeCutHeight)
-        # self.logger.debug("FINAL EIGENGENES")
-        # self.logger.debug(self.eigengenes.matrix)
+                                                         self.args.wgcnaParameters['mergeCutHeight'])
 
 
     def run_iteration(self, iterationGenes):
@@ -218,14 +229,15 @@ class IterativeWGCNA(object):
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
         # fitness and update gene module membership
-        self.eigengenes.extract_from_blocks(self.iteration, blocks, self.profiles.samples())
+        self.eigengenes.extract_from_blocks(self.iteration, blocks,
+                                            self.profiles.samples())
 
         if not self.eigengenes.is_empty():
             self.eigengenes.write(False)
 
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
-            self.genes.update_kME(self.eigengenes)
+            self.genes.update_kME(self.eigengenes, iterationGenes)
             self.genes.write(False) # output before pruning
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],
@@ -247,7 +259,7 @@ class IterativeWGCNA(object):
         '''
         generates the unique label for the iteration
         '''
-        self.iteration = 'p' + str(self.passCount) + '_iter_' + str(self.iterationCount)
+        self.iteration = 'p' + str(self.passCount) + '_i' + str(self.iterationCount)
 
 
     def __load_expression_profiles(self):
@@ -261,7 +273,7 @@ class IterativeWGCNA(object):
             sys.exit(1)
 
 
-    def __initialize_R(self):
+    def __initialize_R(self, summaryOnly=False):
         '''
         initialize R workspace and logs
         '''
@@ -272,18 +284,24 @@ class IterativeWGCNA(object):
         ro.r['options'](warn=-1)
 
         # r log
-        rLogger = base().file('iterativeWGCNA-R.log', open='wt')
+        logFile = 'summarize-network-R.log' if summaryOnly \
+          else 'iterativeWGCNA-R.log'
+        rLogger = base().file(logFile, open='wt')
         base().sink(rLogger, type=base().c('output', 'message'))
 
         if self.args.enableWGCNAThreads:
             wgcna().enableWGCNAThreads()
 
 
-    def __initialize_log(self):
+    def __initialize_log(self, summaryLog=False):
         '''
         initialize log by setting path and file format
         '''
-        logging.basicConfig(filename=self.args.workingDir + '/iterativeWGCNA.log',
+        if summaryLog:
+            logName = 'summarize-network.log'
+        else:
+            logName = 'iterativeWGCNA.log'
+        logging.basicConfig(filename=self.args.workingDir + '/' + logName,
                             filemode='w', format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
@@ -307,12 +325,12 @@ class IterativeWGCNA(object):
         log WGCNA parameter choices and working
         directory name
         '''
-      
+
         self.logger.info("Working directory: " + self.args.workingDir)
         self.logger.info("Saving blocks for each iteration? "
                          + ("TRUE" if self.args.saveBlocks else "FALSE"))
         self.logger.info("Merging final modules if cutHeight <= "
-                         + str(self.args.moduleMergeCutHeight))
+                         + str(self.args.wgcnaParameters['mergeCutHeight']))
         self.logger.info("Allowing WGCNA Threads? "
                          + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
         self.logger.info("Running WGCNA with the following params:")
@@ -373,7 +391,6 @@ class IterativeWGCNA(object):
             warning(modules)
 
 
-
     def write_gene_counts(self, initial, fit):
         '''
         writes the number of kept and dropped genes at the end of an iteration
@@ -389,4 +406,3 @@ class IterativeWGCNA(object):
             with open(fileName, 'a') as f:
                 print('\t'.join((self.iteration, str(initial),
                                  str(fit), str(initial - fit))), file=f)
-

@@ -109,13 +109,29 @@ class Genes(object):
         return self.__extract_modules()
 
 
+    def get_gene_kME(self):
+        '''
+        public facing method for getting all gene kMEs
+        '''
+        return self.__extract_kME()
+
+
+    def get_module_kME(self, targetModule):
+        '''
+        get all kME values in a module
+        '''
+        membership = self.get_module_members(targetModule)
+        memberKME = self.__extract_kME()
+        return [kME for gene, kME in memberKME.items() if gene in membership]
+
+
     def get_kME(self, gene):
         '''
         returns the assigned kME for a gene
         '''
         return self.genes[gene]['kME']
 
- 
+
     def __extract_kME(self):
         '''
         extract eigengene connectivity (kME)
@@ -147,41 +163,41 @@ class Genes(object):
             return False
 
 
-    def __update_module_kME(self, module, eigengene):
+    def __update_module_kME(self, module, eigengene, genes=None):
         '''
         update member gene eigengene connectivity (kME)
         for specified module and eigengene
         '''
-
         members = self.get_module_members(module)
         memberKME = calculate_kME(self.profiles.gene_expression(members),
                                   eigengene, False)
-        
-        # self.logger.debug("Updating module kME")
-        # self.logger.debug("Module Name:" +  module)
-        # self.logger.debug("Module members: ")
-        # self.logger.debug(members)
-        # self.logger.debug(memberKME)
 
         for gene in memberKME.rownames:
-            self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
+            if genes is not None:
+                if gene in genes:
+                    self.__update_kME(gene, round(memberKME.rx(gene, 1)[0], 2))
 
 
-    def update_kME(self, eigengenes):
+    def update_kME(self, eigengenes, genes=None):
+        '''
+        update module kME given its eigengene
+        '''
         modules = self.get_modules()
         for m in modules:
             moduleEigengene = eigengenes.get_module_eigengene(m)
-            self.__update_module_kME(m, moduleEigengene)
+            self.__update_module_kME(m, moduleEigengene, genes)
 
 
-    def __write_kME(self):
+    def __write_kME(self, isPruned):
         '''
         writes eigengene connectivity (kME)
         to a file
         '''
         df = ro.DataFrame(self.__extract_kME())
         df.rownames = (self.iteration)
-        fileName = 'eigengene-connectivity.txt'
+        fileName = 'eigengene-connectivity.txt' \
+                   if isPruned else 'pre-pruning-eigengene-connectivity.txt'
+
         write_data_frame(df, fileName, 'Iteration')
         return None
 
@@ -192,7 +208,7 @@ class Genes(object):
         to files
         '''
         self.__write_modules(isPruned)
-        self.__write_kME()
+        self.__write_kME(isPruned)
         return None
 
 
@@ -215,7 +231,6 @@ class Genes(object):
         if a list of genes is provided, only counts within
         the specified gene list
         '''
-
         membership = self.__extract_modules()
         if genes is not None:
             membership = {gene:module for gene, module in membership.items() if gene in genes}
@@ -224,15 +239,6 @@ class Genes(object):
 
         return len(classified)
 
-
-    def get_classified_gene_profiles(self):
-        '''
-        get classified gene profiles
-        '''
-        membership = self.__extract_modules()
-        classifiedGenes = [gene for gene, module in membership.items()
-                           if module != 'UNCLASSIFIED']
-        return self.profiles.get_expression(classifiedGenes)
 
 
     def get_classified_genes(self, genes=None):
@@ -251,13 +257,6 @@ class Genes(object):
         return classifiedGenes
 
 
-    def get_unclassified_gene_profiles(self):
-        '''
-        get unclassified gene profiles
-        '''
-        unclassifiedGenes = self.get_unclassified_genes()
-        return self.profiles.get_expression(unclassifiedGenes)
-
 
     def get_unclassified_genes(self):
         '''
@@ -269,14 +268,7 @@ class Genes(object):
         return unclassifiedGenes
 
 
-    def get_gene_expression(self, genes):
-        '''
-        get expression profiles for specified
-        list of genes
-        '''
-        return self.profiles.get_expression(genes)
 
-    
     def count_modules(self, genes=None):
         '''
         counts the number of modules (excluding unclassified)
@@ -321,6 +313,13 @@ class Genes(object):
         return [gene for gene, module in membership.items() if module == targetModule]
 
 
+    def get_genes(self):
+        '''
+        return list of all genes
+        '''
+        return [gene for gene in self.genes]
+
+
     def evaluate_fit(self, minKMEtoStay, genes=None):
         '''
         evaluate fit of each gene to its assigned
@@ -329,7 +328,7 @@ class Genes(object):
         if a gene list is provided, only evaluates the
         specified genes
         '''
-      
+
         if genes is None:
             genes = self.profiles.genes()
 
@@ -368,7 +367,7 @@ class Genes(object):
                     modules.remove(m2)
 
                     self.logger.info("Merging " + m1 + " and "
-                                 + m2 + " (D = " + str(dissimilarity) + ")")
+                                     + m2 + " (D = " + str(dissimilarity) + ")")
 
         if len(revisedModules) != 0:
             # update gene membership and kME calculations
@@ -405,7 +404,7 @@ class Genes(object):
             # calculate kME of all genes to the module eigengene
             moduleEigengene = eigengenes.get_module_eigengene(m)
             moduleKME = calculate_kME(self.profiles.expression(), moduleEigengene, True)
-            
+
             # for each gene not assigned to the current module, test fit
             for g in self.genes:
                 currentModule = self.get_module(g)
@@ -424,3 +423,4 @@ class Genes(object):
                         count = count + 1
 
         return count
+

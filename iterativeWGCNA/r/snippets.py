@@ -15,11 +15,45 @@ dissMatrix <- function(df) {
     1.0 - df
 }
 
+# add a constant value
+add <- function(df, value) {
+    df + value
+}
+
+# return power-weighted matrix
+powerWeightMatrix <- function(df, power) {
+    df^power
+}
+
+
+# set values < thresshold to 0
+filterByThreshold <- function(df, threshold) {
+    df[df < threshold] <- 0
+    df
+}
+
+
+# set value of matrix diagonal
+diag <- function(df, value) {
+    diag(df) <- value
+    df
+}
+
 # wrapper for save object b/c doesn't seem to work with rpy2
 saveObject <- function(obj, objName, file) {
    assign(objName, obj)
    save(list=c(objName), file = file)
 }
+
+# calculate degree summary for module genes
+degree <- function(adjMatrix, members, threshold) {
+    adjSubset <- adjMatrix[members, members]
+    inDegree = sum(adjSubset >= threshold) / 2
+    adjSubset <- adjMatrix[members,  !names(adjMatrix) %in% members]
+    outDegree <- sum(adjSubset >= threshold)
+    list(kIn=inDegree, kOut=outDegree)
+}
+
 
 # given WGCNA blocks, extracts and transposes eigengene matrix
 # labels columns (samples)
@@ -54,6 +88,21 @@ removeUnclassified <- function(expr, membership) {
     membership <- membership[row.names(expr)]
     classified = membership != "UNCLASSIFIED"
     expr[classified, ]
+}
+
+# blue, white, red color scale
+BlWhRed <- function() {
+    colorRampPalette(c("blue", "white", "red"))(100)
+}
+
+# white, yellow, red color scale
+WhYlRed <- function() {
+   colorRampPalette(c("white", "yellow", "red"))(100)
+}
+
+# create color scale by passing a string vector of colors
+colorScale <- function(colors) {
+   colorRampPalette(colors)(100)
 }
 
 """
