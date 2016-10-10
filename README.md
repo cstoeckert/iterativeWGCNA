@@ -131,7 +131,7 @@ python run_iterative_wgcna.py -h
 
 #### WGCNA Parameters
 
-iterativeWGCNA can accept any parameter valid for the WGCNA blockwiseModules function.  See http://www.inside-r.org/packages/cran/wgcna/docs/blockwiseModules for full details
+iterativeWGCNA can accept any parameter valid for the WGCNA blockwiseModules function.  See https://www.rdocumentation.org/packages/WGCNA/versions/1.41-1/topics/blockwiseModules for full details
 
 > To specify these parameters use the `--wgcnaParameters` flag followed by a comma separated list of parameter=value pairs.
 
@@ -141,7 +141,9 @@ For example:
 
 sets the maximum block size to 5000 genes, the correlation type to the biweight correlation, and the power-law scaling factor (beta) to 10
 
-> If WGCNA parameters are not specified, iterativeWGCNA uses the default WGCNA settings for the blockwiseModules function, except for the following:
+> WGCNA's `blockwiseModules` function partitions the gene set into a set of blocks each containing at most `maxBlockSize` genes.  *To run iterativeWGCNA in a single block, set `maxBlockSize` to a value > than the number of genes in your geneset*.
+
+If WGCNA parameters are not specified, iterativeWGCNA uses the default WGCNA settings for the blockwiseModules function, except for the following:
 
 ```python
 minModuleSize = 20 # minimum number of genes in a detected module
@@ -149,7 +151,7 @@ saveTOMs = TRUE # save the topological overlap matrices for each block in the bl
 minKMEtoStay = 0.8 # minimum eigengene connectivity (kME) required for a gene to be retained in its assigned module
 minCoreKME = 0.8 # if the module does not have minModuleSize genes with eigengene connectivity at least minCoreKME, the module is disbanded
 reassignThreshold = 0.05 # per-set p-value ratio threshold for reassigning genes between modules
-networkType = 'signed' # character string specifying network type. Allowed values are "unsigned" and "signed"
+networkType = 'signed' # character string specifying network type. Allowed values are "unsigned", "signed", and "signed hybrid"
 numericLabels = TRUE # label modules by numbers (e.g., 0,1,2) instead of colors
 ```
 
@@ -247,12 +249,14 @@ python run_network_summary.py -h
 
 -p <power law beta>, --power <power law beta>
     power law beta for weighting the adjacency matrix
+    default = 6
     
 --signed
    generate signed adjacency matrix?
    
 --minKMEtoStay <minKMEtoStay>
    provide minKMEtoStay used for network generation
+   default = 0.8
 
 --enableWGCNAThreads
    enable WGCNA to use threads
@@ -265,11 +269,29 @@ python run_network_summary.py -h
 + NOTE: all adjacency matrix calculations are done in one block and may fail due to memory allocation issues for large gene-sets
 
 -s <module name>, --summarizeModule <module name>
-    generate summary info for specified module;expects full results from an iterativeWGCNArun in output directory
+    generate summary info for specified module
 
 -e <min edge weight>, --edgeWeight <min edge weight>
-    min edge weight for network summary; filters for connections supported by a correlation >= this threshold
+    min edge weight for network summary; filters for connections supported by a correlation >= edgeWeight
 ```			
+
+#### Output Files
+
+Summary view output files include one or more of the following:
+
+> with the switch `--generateNetworkSummary` and option `network` or `all`:
+
+* `network-block-diagram.pdf`: block diagram and clustering of classified gene network, filtered for connections >= `edgeWeight`
+
+> with the switch `--generateNetworkSummary` and option `input` or `all`
+
+* `input-block-diagram.pdf`: block diagram of a network based on hierarchical clustering of the correlation-based adjacency matrix for all input genes, with classified genes highlighted, filtered for connections >= `edgeWeight`
+
+> with the switch `--sumarizeModule <module name>`:
+
+* `<module name>`-summary.pdf: pdf containing eigengene plot, eigengene connectivity histogram and expression heatmap for the module
+
+
 
 ## Troubleshooting
 
