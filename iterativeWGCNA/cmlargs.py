@@ -171,6 +171,8 @@ def set_wgcna_parameter_defaults(params):
     if params is None:
         params = {}
 
+    if 'networkType' not in params:
+        params['networkType'] = 'signed'
     if 'numericLabels' not in params:
         params['numericLabels'] = True
     if 'minKMEtoStay' not in params:

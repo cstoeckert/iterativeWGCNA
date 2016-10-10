@@ -53,7 +53,7 @@ class WgcnaManager(RManager):
         wgcna().collectGarbage()
 
 
-    def adjacency(self, signed=True, removeNegatives=False, removeSelfReferences=False):
+    def adjacency(self, networkType='signed', removeNegatives=False, removeSelfReferences=False):
         '''
         calculate adjacency matrix; from pearson correlation
         '''
@@ -62,10 +62,7 @@ class WgcnaManager(RManager):
         adjParams['power'] = self.params['power'] if 'power' in self.params else 6
         adjParams['corFnc'] = 'cor'
         adjParams['corOptions'] = "use='p'"
-        if signed:
-            adjParams['type'] = 'signed'
-        else:
-            adjParams['type'] = 'unsigned'
+        adjParams['type'] = networkType
         adjParams['datExpr'] = self.transpose_data()
 
         self.adjacencyMatrix = wgcna().adjacency(**adjParams)
@@ -116,7 +113,7 @@ class WgcnaManager(RManager):
             # self.dissimilarityMatrix = rsnippets.powerWeightMatrix(self.TOM, 7)
         #else:
 
-        self.adjacency(signed=True)
+        self.adjacency()
 
         annotation = self.heatmap_annotation_data_frame(['Module'], membership)
         annotationKey = self.heatmap_annotation_key('Module', self.moduleColors)
