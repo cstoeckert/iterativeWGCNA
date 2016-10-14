@@ -31,6 +31,7 @@ class IterativeWGCNA(object):
     def __init__(self, args, summaryOnly=False):
         self.args = args
         create_dir(self.args.workingDir)
+        self.__verify_clean_working_dir()
 
         self.__initialize_log(summaryOnly)
         self.logger.info(strftime("%c"))
@@ -58,6 +59,23 @@ class IterativeWGCNA(object):
             self.algorithmConverged = False
             self.passConverged = False
             self.genes = Genes(self.profiles)
+
+
+    def __verify_clean_working_dir(self):
+        '''
+        verifies that working directory does not contain
+        iterativeWGCNA output files
+        exits to avoid accidental overwrite of earlier runs
+        '''
+        conflictingFiles = set(('eigengene-connectivity.txt', 'eigengene-overview.pdf',
+                                'eigengenes-final.txt', 'eigengenes.txt', 'gene-counts.txt',
+                                'membership.txt', 'pre-pruning-eigengene-connectivity.txt',
+                                'pre-pruning-membership.txt'))
+        files = set(os.listdir(self.args.workingDir))
+        if len(files.intersection(conflictingFiles)) > 0:
+            warning("Working Directory: " + self.args.workingDir \
+                               + " contains output from a prior run of iterativeWGCNA.  Exiting...")
+            sys.exit(1)
 
 
     def run_pass(self, passGenes):
