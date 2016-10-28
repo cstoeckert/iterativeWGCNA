@@ -31,7 +31,8 @@ class IterativeWGCNA(object):
     def __init__(self, args, summaryOnly=False):
         self.args = args
         create_dir(self.args.workingDir)
-        self.__verify_clean_working_dir()
+        if not summaryOnly:
+            self.__verify_clean_working_dir()
 
         self.__initialize_log(summaryOnly)
         self.logger.info(strftime("%c"))

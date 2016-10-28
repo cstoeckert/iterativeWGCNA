@@ -358,7 +358,7 @@ class Network(object):
 
         manager = WgcnaManager(self.profiles.gene_expression(self.classifiedGenes),
                                self.args.wgcnaParameters)
-        manager.adjacency(True, True, True) # signed, but filter negatives & self-refs
+        manager.adjacency('signed', True, True) # signed, but filter negatives & self-refs
         self.adjacency = base().as_data_frame(manager.adjacencyMatrix)
         self.weightedAdjacency = self.adjacency
 
