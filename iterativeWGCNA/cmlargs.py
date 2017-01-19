@@ -100,7 +100,6 @@ minModuleSize=20
 saveTOMs=TRUE
 minKMEtoStay=0.8
 minCoreKME=0.8
-reassignThreshold=0.05
 networkType=signed
 numericLabels=TRUE
 
@@ -182,7 +181,7 @@ def set_wgcna_parameter_defaults(params):
     if 'minModuleSize' not in params:
         params['minModuleSize'] = 20
     if 'reassignThreshold' not in params:
-        params['reassignThreshold'] = 0.05 # 0.0000001 # 1e-6
+        params['reassignThreshold'] = 0.0000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
     if 'mergeCutHeight' not in params:
