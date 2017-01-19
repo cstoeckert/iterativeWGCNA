@@ -186,7 +186,7 @@ def set_wgcna_parameter_defaults(params):
     if 'power' not in params:
         params['power'] = 6
     if 'mergeCutHeight' not in params:
-        params['mergeCutHeight'] = 0.15
+        params['mergeCutHeight'] = 0.05
 
     return params
 
@@ -196,9 +196,8 @@ def parse_summary_command_line_args():
     parse command line args for summary
     '''
 
-    parser = argparse.ArgumentParser(prog='iterativeWGCNA summary',
-                                     description="summarize results from interative WGCNA analysis",
-                                     epilog=summaryHelpEpilog(),
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA network summary',
+                                     description="generate graphical results from interative WGCNA analysis",
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('-i', '--inputFile',
@@ -228,7 +227,6 @@ def parse_summary_command_line_args():
                         help="generate signed adjacency matrix?",
                         action='store_true')
 
-
     parser.add_argument('--minKMEtoStay',
                         help="provide minKMEtoStay used for network generation",
                         default=0.80,
@@ -250,15 +248,57 @@ def parse_summary_command_line_args():
                         + "done in one block and may fail due to memory allocation\n"
                         + "issues for large gene-sets")
 
-    parser.add_argument('-s', '--summarizeModule',
-                        metavar='<module name>',
-                        help="generate summary info for specified module;"
-                        + "expects full results from an iterativeWGCNA"
-                        + "run in output directory")
+    parser.add_argument('-e', '--edgeWeight',
+                        metavar='<min edge weight>',
+                        default=0.5,
+                        help="min edge weight for network summary; filters for\n"
+                        + "connections supported by a correlation >= threshold",
+                        type=restricted_float)
+
+    return parser.parse_args()
 
 
-    parser.add_argument('--prePruning',
-                        help="for summarizing modules; generate pre-pruned overview?",
+def parse_iteration_summary_command_line_args():
+    '''
+    parse command line args for summary
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA iteration summary',
+                                     description="summarize results from an iteration of interative WGCNA",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--iteration',
+                        metavar='<iteration>',
+                        help="iteration to be summarized",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+    parser.add_argument('-p', '--power',
+                        metavar='<power law beta>',
+                        help="power law beta for weighting the adjacency matrix",
+                        default=6,
+                        type=int)
+
+    parser.add_argument('--signed',
+                        help="generate signed adjacency matrix?",
+                        action='store_true')
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.80,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
+
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
                         action='store_true')
 
     parser.add_argument('-e', '--edgeWeight',

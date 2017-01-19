@@ -169,7 +169,7 @@ class IterativeWGCNA(object):
 
         try:
             self.run_iterative_wgcna()
-            self.summarize_results()
+            # self.summarize_results() # can cause memory issues so, removing
             self.logger.info('iterativeWGCNA: SUCCESS')
         except Exception:
             if self.logger is not None:
@@ -243,7 +243,8 @@ class IterativeWGCNA(object):
 
         blocks = self.run_blockwise_wgcna(iterationProfiles)
         if self.args.saveBlocks:
-            rsnippets.saveObject(blocks, 'blocks', 'blocks-' + self.iteration + '.RData')
+            rsnippets.saveBlockResult(blocks, iterationProfiles, 'blocks_' + self.iteration + '.RData')
+            # rsnippets.saveObject(blocks, 'blocks', 'blocks-' + self.iteration + '.RData')
 
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
