@@ -41,12 +41,7 @@ if __name__ == '__main__':
         cmlArgs = add_wgcna_params(cmlArgs)
         network = Network(cmlArgs)
         network.build_from_file(alg.profiles)
-
-        if cmlArgs.generateNetworkSummary:
-            network.summarize_network()
-
-        if cmlArgs.summarizeModule is not None:
-            network.summarize_module(cmlArgs.summarizeModule)
+        network.summarize_network()
 
         logger.info('Summary: SUCCESS')
     except Exception:
