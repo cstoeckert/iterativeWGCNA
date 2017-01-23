@@ -45,7 +45,7 @@ saveObject <- function(obj, objName, file) {
    save(list=c(objName), file = file)
 }
 
-saveObject <- function(blocks, profiles, file) {
+saveBlockResult <- function(blocks, profiles, file) {
    assign('blocks', blocks)
    assign('expression', profiles)
    save(list=c('blocks', 'expression'), file = file)
