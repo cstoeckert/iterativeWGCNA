@@ -181,11 +181,11 @@ def set_wgcna_parameter_defaults(params):
     if 'minModuleSize' not in params:
         params['minModuleSize'] = 20
     if 'reassignThreshold' not in params:
-        params['reassignThreshold'] = 0.0000001 # 1e-6
+        params['reassignThreshold'] = 0.000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
     if 'mergeCutHeight' not in params:
-        params['mergeCutHeight'] = 0.05
+        params['mergeCutHeight'] = 0.15
 
     return params
 
@@ -253,6 +253,10 @@ def parse_summary_command_line_args():
                         help="min edge weight for network summary; filters for\n"
                         + "connections supported by a correlation >= threshold",
                         type=restricted_float)
+
+    parser.add_argument('-n', '--prePruning',
+                        action='store_true',
+                        help="use pre-pruning membership")
 
     return parser.parse_args()
 
