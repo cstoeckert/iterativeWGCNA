@@ -61,6 +61,22 @@ degree <- function(adjMatrix, members, threshold) {
 }
 
 
+# find close two closest modules given 
+findCloseModules <- function(similarityMatrix, cutHeight) {
+     returnVal <- NULL
+     d <- 1 - similarityMatrix
+     comparison <- d[d > 0 & d <= cutHeight]
+     modulesFound <- sum(comparison) > 0
+
+     if (modulesFound) {
+         # indexes of closest modules
+         indexes <- which(d == min(comparison), arr.ind = TRUE)
+         returnVal <- list(m1 = row.names(d)[indexes[1,1]], m2 = row.names(d)[indexes[1,2]], dissimilarity = d[indexes[1,1], indexes[1,2]])
+     }
+    returnVal
+}
+
+
 # given WGCNA blocks, extracts and transposes eigengene matrix
 # labels columns (samples)
 # cleans up module names (removes the "ME")

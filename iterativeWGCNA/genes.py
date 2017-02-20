@@ -199,7 +199,7 @@ class Genes(object):
         return None
 
 
-    def write(self, prefix):
+    def write(self, prefix=''):
         '''
         writes the membership and eigengene connectivity
         to files
@@ -240,7 +240,7 @@ class Genes(object):
 
     def get_classified_genes(self, genes=None):
         '''
-        gets the list of classifed genes
+        gets the list of classified genes
         if a list of genes is provided, only returns
         genes within the specified list
         '''
@@ -348,41 +348,41 @@ class Genes(object):
 
         return updated eigengene object
         '''
+
+        # repeat until no more merges are possible
+        noMergesFound = False
+        mergeCount = 0
         modules = self.get_modules()
-        revisedModules = {}
+        while not noMergesFound:
+            # compare modules, finding min dissimilarity
+            similarity = eigengenes.similarity(None)
+            closeModules = rsnippets.findCloseModules(similarity, cutHeight)
+            if closeModules != ro.NULL:
+                m1 = closeModules.rx2('m1')[0]
+                m2 = closeModules.rx2('m2')[0]
+                dissimilarity = closeModules.rx2('dissimilarity')[0]
+                mergeCount = mergeCount + 1
+                self.logger.info("Merging " + m1 + " and " + m2
+                                 + " (D = " + str(dissimilarity) + ")")
 
-        for m1 in modules:
-            similarity = eigengenes.similarity(m1)
-            for m2 in modules:
-                if m1 == m2:
-                    continue
-                dissimilarity = round(1.0 - similarity.rx(m2, 1)[0], 2)
-                if dissimilarity <= cutHeight:
-                    revisedModules[m1] = m2
-
-                    # remove m2 so we don't end up mapping m1 to m2 as well as m2 to m1
-                    modules.remove(m2)
-
-                    self.logger.info("Merging " + m1 + " and "
-                                     + m2 + " (D = " + str(dissimilarity) + ")")
-
-        if len(revisedModules) != 0:
-            # update gene membership and kME calculations
-            for m in revisedModules:
-                memberGenes = self.get_module_members(m)
-                newModule = revisedModules[m]
+                memberGenes = self.get_module_members(m1)
                 for g in memberGenes:
-                    self.__update_module(g, newModule)
-                self.__update_module_kME(m, eigengenes.get_module_eigengene(newModule))
+                    self.__update_module(g, m2)
+                self.__update_module_kME(m1, eigengenes.get_module_eigengene(m2))
 
-                modules = self.get_modules() # update list of modules
+                modules = self.get_modules()
                 eigengenes.update_to_subset(modules) # update eigengenes to reflect new list
+                # recalculate eigengenes instead of updating
 
-        self.logger.info("Done merging close modules: " + str(len(revisedModules)) + " modules merged.")
+            else:
+                noMergesFound = True
+
+        self.logger.info("Done merging close modules: " + str(mergeCount) + " modules merged.")
         self.logger.info("Retained " + str(len(modules)) + " modules after merge.")
+
         return eigengenes
 
-
+    
     def reassign_to_best_fit(self, eigengenes, reassignThreshold, minKMEtoStay):
         '''
         Evaluate eigengene connectivity (kME)
@@ -421,3 +421,26 @@ class Genes(object):
 
         return count
 
+
+    def load_membership(self, iteration):
+        '''
+        loads membership for a given iteration
+        '''
+        fileName = "final-membership.txt"
+        membership = ro.DataFrame.from_csvfile(fileName, sep='\t',
+                                               header=True, row_names=1, as_is=True)
+
+        index = membership.names.index(iteration)
+
+        classifiedCount = 0
+        unclassifiedCount = 0
+        for g in self.genes:
+            module = membership.rx(g, index)[0]
+            if module == 'UNCLASSIFIED':
+                unclassifiedCount = unclassifiedCount + 1
+            else:
+                classifiedCount = classifiedCount + 1
+            self.__update_module(g, module)
+
+        self.logger.info("Loaded " + classifiedCount + " classified genes")
+        self.logger.info("Loaded " + unclassifiedCount + " unclassified genes")

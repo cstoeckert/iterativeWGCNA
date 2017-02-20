@@ -152,6 +152,19 @@ class IterativeWGCNA(object):
         self.transpose_output_files()
 
 
+    def merge_close_modules_from_output(self, iteration):
+        '''
+        load data from output and remerge
+        '''
+        self.genes.load_membership(iteration)
+        self.merge_close_modules()
+        self.reassign_genes_to_best_fit_module()
+        self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
+        self.genes.write('adjusted-merge-')
+        self.eigengenes.write('adjusted-merge-')
+        # self.transpose_output_files()
+
+        
     def summarize_results(self):
         '''
         generate summary output and graphics

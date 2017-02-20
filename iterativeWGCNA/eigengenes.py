@@ -51,7 +51,7 @@ class Eigengenes(object):
                                                 header=True, row_names=1)
 
 
-    def write(self, prefix):
+    def write(self, prefix=''):
         '''
         writes the eigengene matrix to file
         '''
@@ -59,13 +59,19 @@ class Eigengenes(object):
         write_data_frame(self.matrix, fileName, 'Module')
 
 
-    def similarity(self, module):
+    def similarity(self, module=None):
         '''
         calculate similarity between eigengene for a specific
         module and all the other eigengenes
+
+        if no module is specified, calculate the similarity matrix
+        between all eigengenes
         '''
-        sim = base().as_data_frame(stats().cor(base().t(self.matrix), \
-                                               base().t(self.matrix.rx(module, True))))
+        if module is None:
+            sim = base().as_data_frame(stats().cor(base().t(self.matrix)))
+        else:
+            sim = base().as_data_frame(stats().cor(base().t(self.matrix), \
+                                            base().t(self.matrix.rx(module, True))))
         return sim
 
 
