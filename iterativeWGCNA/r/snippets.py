@@ -63,11 +63,14 @@ degree <- function(adjMatrix, members, threshold) {
 
 # find close two closest modules given 
 findCloseModules <- function(similarityMatrix, cutHeight) {
+     print(similarityMatrix)
      returnVal <- NULL
      d <- 1 - similarityMatrix
      comparison <- d[d > 0 & d <= cutHeight]
      modulesFound <- sum(comparison) > 0
-
+     print(d)
+     print(comparison)
+     print(modulesFound)
      if (modulesFound) {
          # indexes of closest modules
          indexes <- which(d == min(comparison), arr.ind = TRUE)
@@ -85,7 +88,7 @@ extractEigengenes <- function(iteration, blocks, sampleNames) {
     eigengenes <- as.data.frame(t(blocks$MEs))
     colnames(eigengenes) <- sampleNames
     eigengenes <- eigengenes[row.names(eigengenes) != "ME0" & row.names(eigengenes) != "MEgrey", ]
-    row.names(eigengenes) <- gsub("ME", paste(iteration, "-", sep=""), row.names(eigengenes))
+    row.names(eigengenes) <- gsub("ME", paste(iteration, "_", sep=""), row.names(eigengenes))
     eigengenes
 }
 

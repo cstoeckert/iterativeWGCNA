@@ -3,6 +3,7 @@
 '''
 manage genes
 '''
+from __future__ import print_function
 
 import logging
 from collections import OrderedDict
@@ -14,7 +15,6 @@ import rpy2.robjects as ro
 from .analysis import calculate_kME
 from .eigengenes import Eigengenes
 from .r.imports import wgcna, stats, base, rsnippets
-from .io.utils import write_data_frame
 
 class Genes(object):
     '''
@@ -31,7 +31,7 @@ class Genes(object):
         '''
         self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
-        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN'), 'iteration':0}) for geneId in self.profiles.genes())
+        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN'), 'iteration': None}) for geneId in self.profiles.genes())
 
         self.size = len(self.genes)
         self.iteration = None
@@ -63,13 +63,13 @@ class Genes(object):
             return False
 
 
-    def __set_classified_iteration(self, gene):
+    def __update_classified_iteration(self, gene, iteration):
         '''
         set the iteration during which
         a gene was first classified
         '''
         if gene in self.genes:
-            self.genes[gene]['iteration'] = self.iteration
+            self.genes[gene]['iteration'] = iteration
             return True
         else:
             return False
@@ -92,10 +92,9 @@ class Genes(object):
             if module in ('0', 'grey'):
                 module = 'UNCLASSIFIED'
             else:
-                module = self.iteration + '-' + module
-                self.__set_classified_iteration(gene)
+                module = self.iteration + '_' + 'M' + str(module)
+                self.__update_classified_iteration(gene, self.iteration)
             self.__update_module(gene, module)
-            
 
         return None
 
@@ -114,16 +113,18 @@ class Genes(object):
         get genes classified during specified interation
         '''
         assignedIterations = self.__extract_classified_iteration()
-        return [gene for gene, iteration in assignedIterations.items() if iteration == targetIteration]
+        return [gene for gene, iteration in assignedIterations.items()
+                if iteration == targetIteration]
 
 
     def __extract_classified_iteration(self):
         '''
         get classified iteration as an ordered dict
         '''
-        return OrderedDict((gene, membership['iteration']) for gene, membership in self.genes.items())
+        return OrderedDict((gene, membership['iteration'])
+                           for gene, membership in self.genes.items())
 
-            
+
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
@@ -169,16 +170,6 @@ class Genes(object):
         return OrderedDict((gene, membership['kME']) for gene, membership in self.genes.items())
 
 
-    def __write_modules(self, prefix=''):
-        '''
-        writes the gene memebership to a file
-        '''
-        df = ro.DataFrame(self.__extract_modules())
-        df.rownames = (self.iteration)
-        write_data_frame(df, prefix + "membership.txt", 'Iteration')
-        return None
-
-
     def __update_kME(self, gene, kME):
         '''
         update gene eigengene connectivity (kME)
@@ -216,25 +207,15 @@ class Genes(object):
             self.__update_module_kME(m, moduleEigengene, genes)
 
 
-    def __write_kME(self, prefix=''):
-        '''
-        writes eigengene connectivity (kME)
-        to a file
-        '''
-        df = ro.DataFrame(self.__extract_kME())
-        df.rownames = (self.iteration)
-     
-        write_data_frame(df, prefix + "eigengene-connectivity.txt", 'Iteration')
-        return None
-
-
     def write(self, prefix=''):
         '''
         writes the membership and eigengene connectivity
         to files
         '''
-        self.__write_modules(prefix)
-        self.__write_kME(prefix)
+        with open(prefix + 'membership.txt', 'w') as f:
+            print('\t'.join(('Gene', 'Module', 'kME')), file=f)
+            for g in self.genes:
+                print('\t'.join((g, self.genes[g]['module'], str(self.genes[g]['kME']))), file=f)
         return None
 
 
@@ -319,6 +300,7 @@ class Genes(object):
             if memberCount[geneModule] < minModuleSize:
                 self.__update_module(g, 'UNCLASSIFIED')
                 self.__update_kME(g, float('NaN'))
+                self.__update_classified_iteration(g, None)
 
 
     def get_modules(self):
@@ -397,6 +379,7 @@ class Genes(object):
                 memberGenes = self.get_module_members(m1)
                 for g in memberGenes:
                     self.__update_module(g, m2)
+                    self.__update_classified_iteration(g, 'final-merge')
                 self.__update_module_kME(m1, eigengenes.get_module_eigengene(m2))
 
                 modules = self.get_modules()
@@ -411,7 +394,7 @@ class Genes(object):
 
         return eigengenes
 
-    
+
     def reassign_to_best_fit(self, eigengenes, reassignThreshold, minKMEtoStay):
         '''
         Evaluate eigengene connectivity (kME)

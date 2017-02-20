@@ -87,10 +87,12 @@ class IterativeWGCNA(object):
 
         passDirectory = 'pass' + str(self.passCount)
         create_dir(passDirectory)
-        write_data_frame(passGenes, os.path.join(passDirectory, 'initial-pass-expression-set.txt'), 'Gene')
+        write_data_frame(self.profiles.gene_expression(passGenes),
+                         os.path.join(passDirectory, 'initial-pass-expression-set.txt'),
+                         'Gene')
 
         iterationGenes = passGenes
-        
+
         while not self.passConverged:
             self.run_iteration(iterationGenes)
 
@@ -152,7 +154,7 @@ class IterativeWGCNA(object):
 
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
 
-        self.genes.write()
+        self.genes.write('final-')
         self.eigengenes.write('final-')
         self.transpose_output_files()
 
@@ -169,7 +171,7 @@ class IterativeWGCNA(object):
         self.eigengenes.write('adjusted-merge-')
         # self.transpose_output_files()
 
-        
+
     def summarize_results(self):
         '''
         generate summary output and graphics
@@ -241,8 +243,10 @@ class IterativeWGCNA(object):
         self.__log_final_modules(modules)
 
         self.eigengenes.load_matrix_from_file('eigengenes.txt')
+        warning(self.eigengenes.matrix)
         self.eigengenes.update_to_subset(modules)
-
+        warning(self.eigengenes.matrix)
+        
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
                                                          self.args.wgcnaParameters['mergeCutHeight'])
 
@@ -253,7 +257,7 @@ class IterativeWGCNA(object):
         '''
         self.__generate_iteration_label()
 
-        iterationDir = os.path.join('pass' + self.passCount, 'i' + self.iterationCount)
+        iterationDir = os.path.join('pass' + str(self.passCount), 'i' + str(self.iterationCount))
         create_dir(iterationDir)
 
         if self.args.verbose:
@@ -273,17 +277,17 @@ class IterativeWGCNA(object):
                                             self.profiles.samples())
 
         if not self.eigengenes.is_empty():
-            self.eigengenes.write() # need to keep single run on file across all iterations
+            self.eigengenes.write() # need to keep single file across all iterations
 
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
             self.genes.update_kME(self.eigengenes, iterationGenes)
-            self.genes.write() # output before pruning
+            self.genes.write(os.path.join(iterationDir, 'wgcna-'))
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],
                                     iterationGenes)
             self.genes.remove_small_modules(self.args.wgcnaParameters['minModuleSize'])
-            self.genes.write() # output after pruning
+            self.genes.write(os.path.join(iterationDir, 'ec-pruned-')) # output after pruning
 
 
     def run_blockwise_wgcna(self, exprData):
@@ -299,7 +303,7 @@ class IterativeWGCNA(object):
         '''
         generates the unique label for the iteration
         '''
-        self.iteration = 'p' + str(self.passCount) + '_i' + str(self.iterationCount)
+        self.iteration = 'P' + str(self.passCount) + '_I' + str(self.iterationCount)
 
 
     def __load_expression_profiles(self):
