@@ -51,11 +51,11 @@ class Eigengenes(object):
                                                 header=True, row_names=1)
 
 
-    def write(self, isFinal=False):
+    def write(self, prefix):
         '''
         writes the eigengene matrix to file
         '''
-        fileName = 'eigengenes-final.txt' if isFinal else 'eigengenes.txt'
+        fileName = prefix + 'eigengenes.txt'
         write_data_frame(self.matrix, fileName, 'Module')
 
 

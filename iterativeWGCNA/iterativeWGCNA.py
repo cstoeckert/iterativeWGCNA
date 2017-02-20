@@ -69,7 +69,7 @@ class IterativeWGCNA(object):
         exits to avoid accidental overwrite of earlier runs
         '''
         conflictingFiles = set(('eigengene-connectivity.txt', 'eigengene-overview.pdf',
-                                'eigengenes-final.txt', 'eigengenes.txt', 'gene-counts.txt',
+                                'final-eigengenes.txt', 'eigengenes.txt', 'gene-counts.txt',
                                 'membership.txt', 'pre-pruning-eigengene-connectivity.txt',
                                 'pre-pruning-membership.txt'))
         files = set(os.listdir(self.args.workingDir))
@@ -147,8 +147,8 @@ class IterativeWGCNA(object):
 
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
 
-        self.genes.write(True)
-        self.eigengenes.write(True)
+        self.genes.write()
+        self.eigengenes.write('final-')
         self.transpose_output_files()
 
 
@@ -253,17 +253,17 @@ class IterativeWGCNA(object):
                                             self.profiles.samples())
 
         if not self.eigengenes.is_empty():
-            self.eigengenes.write(False)
+            self.eigengenes.write()
 
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
             self.genes.update_kME(self.eigengenes, iterationGenes)
-            self.genes.write(False) # output before pruning
+            self.genes.write('pre-prunning-') # output before pruning
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],
                                     iterationGenes)
             self.genes.remove_small_modules(self.args.wgcnaParameters['minModuleSize'])
-            self.genes.write(True) # output after pruning
+            self.genes.write() # output after pruning
 
 
     def run_blockwise_wgcna(self, exprData):
@@ -313,12 +313,14 @@ class IterativeWGCNA(object):
             wgcna().enableWGCNAThreads()
 
 
-    def __initialize_log(self, summaryLog=False):
+    def __initialize_log(self, logType='iterative'):
         '''
         initialize log by setting path and file format
         '''
-        if summaryLog:
+        if logType == 'summary':
             logName = 'summarize-network.log'
+        elif logType == 'merge':
+            logName = 'adjust-merge.log'
         else:
             logName = 'iterativeWGCNA.log'
         logging.basicConfig(filename=self.args.workingDir + '/' + logName,

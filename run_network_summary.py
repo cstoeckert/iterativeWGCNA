@@ -34,7 +34,7 @@ def add_wgcna_params(args):
 
 if __name__ == '__main__':
     cmlArgs = parse_summary_command_line_args()
-    alg = IterativeWGCNA(cmlArgs, True) # initialize workspace, logs and load profiles
+    alg = IterativeWGCNA(cmlArgs, 'summary') # initialize workspace, logs and load profiles
     logger = logging.getLogger('iterativeWGCNA.SummarizeResults')
 
     try:

@@ -254,11 +254,66 @@ def parse_summary_command_line_args():
                         + "connections supported by a correlation >= threshold",
                         type=restricted_float)
 
-    parser.add_argument('-n', '--prePruning',
+    parser.add_argument('-preMerge',
                         action='store_true',
-                        help="use pre-pruning membership")
+                        help="use membership from final iteration (before merging)")
 
     return parser.parse_args()
+
+
+
+def parse_adjust_merge_command_line_args():
+    '''
+    parse command line args for adjusting the merge
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA network summary',
+                                     description="regenerate final merge",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--inputFile',
+                        metavar='<gene expression file>',
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+  
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
+                        action='store_true')
+
+    parser.add_argument('--mergeCutHeight',
+                        metavar='<cut height>',
+                        default=0.15,
+                        help="max dissimilarity (dendrogram cut height)\n"
+                        + "between eigengenes for merging",
+                        type=restricted_float)
+
+    parser.add_argument('--reassignThreshold',
+                        metavar='<reassign threshold>',
+                        default=0.000001,
+                        help="p-value for reassigning genes to modules\n",
+                        type=restricted_float)
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.85,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
+     
+    return parser.parse_args()
+
 
 
 def parse_iteration_summary_command_line_args():

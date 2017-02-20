@@ -140,14 +140,13 @@ class Genes(object):
         return OrderedDict((gene, membership['kME']) for gene, membership in self.genes.items())
 
 
-    def __write_modules(self, isPruned):
+    def __write_modules(self, prefix=''):
         '''
         writes the gene memebership to a file
         '''
         df = ro.DataFrame(self.__extract_modules())
         df.rownames = (self.iteration)
-        fileName = 'membership.txt' if isPruned else 'pre-pruning-membership.txt'
-        write_data_frame(df, fileName, 'Iteration')
+        write_data_frame(df, prefix + "membership.txt", 'Iteration')
         return None
 
 
@@ -188,27 +187,25 @@ class Genes(object):
             self.__update_module_kME(m, moduleEigengene, genes)
 
 
-    def __write_kME(self, isPruned):
+    def __write_kME(self, prefix=''):
         '''
         writes eigengene connectivity (kME)
         to a file
         '''
         df = ro.DataFrame(self.__extract_kME())
         df.rownames = (self.iteration)
-        fileName = 'eigengene-connectivity.txt' \
-                   if isPruned else 'pre-pruning-eigengene-connectivity.txt'
-
-        write_data_frame(df, fileName, 'Iteration')
+     
+        write_data_frame(df, prefix + "eigengene-connectivity.txt", 'Iteration')
         return None
 
 
-    def write(self, isPruned):
+    def write(self, prefix):
         '''
         writes the membership and eigengene connectivity
         to files
         '''
-        self.__write_modules(isPruned)
-        self.__write_kME(isPruned)
+        self.__write_modules(prefix)
+        self.__write_kME(prefix)
         return None
 
 
