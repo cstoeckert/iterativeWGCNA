@@ -206,9 +206,9 @@ class IterativeWGCNA(object):
         count = self.genes.reassign_to_best_fit(self.eigengenes,
                                                 self.args.wgcnaParameters['reassignThreshold'],
                                                 self.args.wgcnaParameters['minKMEtoStay'])
-        self.logger.info("Reassinged " + str(count) + " genes in final kME review.")
+        self.logger.info("Reassigned " + str(count) + " genes in final kME review.")
         if self.args.verbose:
-            warning("Reassinged " + str(count) + " genes in final kME review.")
+            warning("Reassigned " + str(count) + " genes in final kME review.")
 
 
     def merge_close_modules(self):
@@ -394,7 +394,7 @@ class IterativeWGCNA(object):
         '''
         log classified gene count
         '''
-        message = " FIT: " + str(classifiedGeneCount) + "; RESIDUAL: "
+        message = "FIT: " + str(classifiedGeneCount) + "; RESIDUAL: "
         message = message + str(initialGeneCount - classifiedGeneCount)
         self.logger.info(message)
         if self.args.verbose:

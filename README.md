@@ -7,13 +7,13 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 ## Contents
 
 
-### Setup
+### Setup and Installation
 
 * [Dependencies](#dependencies)
 * [Installation](#installation)
   
 ### Usage
-  * [Run iterativeWGCNA](#running-iterativewgcna)
+  * [Running iterativeWGCNA](#running-iterativewgcna)
   * [Summary Views](#summary-views)
   
 ### [Troubleshooting](#troubleshooting-1)
@@ -51,7 +51,7 @@ iterativeWGCNA can be run without installing the package as long as the requisit
 
 To install the iterativeWGCNA package run the following command:
 
-```
+```bash
 git clone https://github.com/cstoeckert/iterativeWGCNA.git
 cd iterativeWGCNA
 python setup.py install
@@ -62,7 +62,7 @@ python setup.py install
 
 As a work around, specify the `--user` switch to install iterativeWGCNA and its dependencies to a local (user) library (e.g., `.local/bin` on a Linux system) as follows:
 
-```
+```sh
 git clone https://github.com/cstoeckert/iterativeWGCNA.git
 cd iterativeWGCNA
 python setup.py install --user
@@ -82,13 +82,13 @@ python setup.py install --user
 
 iterativeWGCNA can be run without installing the iterativeWGCNA package by excuting the wrapper script `run_iterative_wgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.
 
-```
+```sh
 python run_iterative_wgcna.py -i <input_file_path> 
 ```
 
 if the iterativeWGCNA package was installed, iterativeWGCNA can also be run at the package level using the `-m` switch:
 
-```
+```sh
 python -m iterativeWGCNA -i <input_file_path> 
 ```
 
@@ -96,7 +96,7 @@ python -m iterativeWGCNA -i <input_file_path>
 
 Execute `run_iterative_wgcna.py` with the `-h` (`--help`) switch to see all command line options and additional usage information, including details on file formats.
 
-```
+```sh
 python run_iterative_wgcna.py -h
 ```
 
@@ -227,7 +227,7 @@ In the output files:
 
 Once iterativeWGCNA is completed, additional summary views of the classification can be generated from the output, including per-module data summaries and visualizations.  This is accomplished with the wrapper script `run_network_summary.py`.  At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.  
 
-```
+```sh
 python run_network_summary.py -i <input_file_path> 
 ```
 
@@ -235,7 +235,7 @@ python run_network_summary.py -i <input_file_path>
 
 Execute `run_network_summary.py` with the `-h` (`--help`) switch to see all command line options and additional usage information.
 
-```
+```sh
 python run_network_summary.py -h
 ```
 
@@ -299,7 +299,6 @@ Summary view output files include one or more of the following:
 * `<module name>`-summary.pdf: pdf containing eigengene plot, eigengene connectivity histogram and expression heatmap for the module
 
 
-
 ## Troubleshooting
 
 Access to the `readline` library in the context of the `rpy2` library can be problematic and has been [reported elsewhere](https://github.com/ContinuumIO/anaconda-issues/issues/152). In trying to run iterativeWGCNA, an error like the following would be observed:
@@ -317,6 +316,7 @@ ImportError: /home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/rinterf
 ```
 
 The workaround is to uncomment the following line in `run_iterative_wgcna.py`:
-```
+
+```python
 # import readline
 ```
