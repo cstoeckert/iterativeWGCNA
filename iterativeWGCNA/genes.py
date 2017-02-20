@@ -31,7 +31,7 @@ class Genes(object):
         '''
         self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
-        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN')}) for geneId in self.profiles.genes())
+        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN'), 'iteration':0}) for geneId in self.profiles.genes())
 
         self.size = len(self.genes)
         self.iteration = None
@@ -63,6 +63,18 @@ class Genes(object):
             return False
 
 
+    def __set_classified_iteration(self, gene):
+        '''
+        set the iteration during which
+        a gene was first classified
+        '''
+        if gene in self.genes:
+            self.genes[gene]['iteration'] = self.iteration
+            return True
+        else:
+            return False
+
+
     def update_membership(self, genes, blocks):
         '''
         fetches new module membership from WGCNA
@@ -81,7 +93,9 @@ class Genes(object):
                 module = 'UNCLASSIFIED'
             else:
                 module = self.iteration + '-' + module
+                self.__set_classified_iteration(gene)
             self.__update_module(gene, module)
+            
 
         return None
 
@@ -95,6 +109,21 @@ class Genes(object):
             self.__update_module(gene, module)
 
 
+    def __extract_iteration_genes(self, targetIteration):
+        '''
+        get genes classified during specified interation
+        '''
+        assignedIterations = self.__extract_classified_iteration()
+        return [gene for gene, iteration in assignedIterations.items() if iteration == targetIteration]
+
+
+    def __extract_classified_iteration(self):
+        '''
+        get classified iteration as an ordered dict
+        '''
+        return OrderedDict((gene, membership['iteration']) for gene, membership in self.genes.items())
+
+            
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
@@ -362,7 +391,7 @@ class Genes(object):
                 m2 = closeModules.rx2('m2')[0]
                 dissimilarity = closeModules.rx2('dissimilarity')[0]
                 mergeCount = mergeCount + 1
-                self.logger.info("Merging " + m1 + " and " + m2
+                self.logger.info("Merging " + m1 + " into " + m2
                                  + " (D = " + str(dissimilarity) + ")")
 
                 memberGenes = self.get_module_members(m1)

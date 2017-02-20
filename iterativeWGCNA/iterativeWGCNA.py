@@ -19,7 +19,7 @@ from .expression import Expression
 from .eigengenes import Eigengenes
 from .network import Network
 from .wgcna import WgcnaManager
-from .io.utils import create_dir, read_data, warning, transpose_file_contents
+from .io.utils import create_dir, read_data, warning, transpose_file_contents, write_data_frame
 from .r.imports import base, wgcna, rsnippets
 
 
@@ -85,7 +85,12 @@ class IterativeWGCNA(object):
         (prune data until no more residuals are found)
         '''
 
+        passDirectory = 'pass' + str(self.passCount)
+        create_dir(passDirectory)
+        write_data_frame(passGenes, os.path.join(passDirectory, 'initial-pass-expression-set.txt'), 'Gene')
+
         iterationGenes = passGenes
+        
         while not self.passConverged:
             self.run_iteration(iterationGenes)
 
@@ -248,6 +253,9 @@ class IterativeWGCNA(object):
         '''
         self.__generate_iteration_label()
 
+        iterationDir = os.path.join('pass' + self.passCount, 'i' + self.iterationCount)
+        create_dir(iterationDir)
+
         if self.args.verbose:
             warning("Iteration: " + self.iteration)
 
@@ -256,8 +264,7 @@ class IterativeWGCNA(object):
 
         blocks = self.run_blockwise_wgcna(iterationProfiles)
         if self.args.saveBlocks:
-            rsnippets.saveBlockResult(blocks, iterationProfiles, 'blocks_' + self.iteration + '.RData')
-            # rsnippets.saveObject(blocks, 'blocks', 'blocks-' + self.iteration + '.RData')
+            rsnippets.saveBlockResult(blocks, iterationProfiles, os.path.join(iterationDir, 'blocks_' + self.iteration + '.RData'))
 
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
@@ -266,12 +273,12 @@ class IterativeWGCNA(object):
                                             self.profiles.samples())
 
         if not self.eigengenes.is_empty():
-            self.eigengenes.write()
+            self.eigengenes.write() # need to keep single run on file across all iterations
 
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
             self.genes.update_kME(self.eigengenes, iterationGenes)
-            self.genes.write('pre-prunning-') # output before pruning
+            self.genes.write() # output before pruning
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],
                                     iterationGenes)
