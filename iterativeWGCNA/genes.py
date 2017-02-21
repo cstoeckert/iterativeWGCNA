@@ -15,6 +15,7 @@ import rpy2.robjects as ro
 from .analysis import calculate_kME
 from .eigengenes import Eigengenes
 from .r.imports import wgcna, stats, base, rsnippets
+from .io.utils import xstr
 
 class Genes(object):
     '''
@@ -204,11 +205,9 @@ class Genes(object):
         modules = self.get_modules()
         for m in modules:
             moduleEigengene = eigengenes.get_module_eigengene(m)
-            base().print(m)
-            base().print(moduleEigengene)
             self.__update_module_kME(m, moduleEigengene, genes)
 
-
+            
     def write(self, prefix=''):
         '''
         writes the membership and eigengene connectivity
@@ -217,7 +216,7 @@ class Genes(object):
         with open(prefix + 'membership.txt', 'w') as f:
             print('\t'.join(('Gene', 'Module', 'kME')), file=f)
             for g in self.genes:
-                print('\t'.join((g, self.genes[g]['module'], str(self.genes[g]['kME']))), file=f)
+                print('\t'.join((g, self.genes[g]['module'], xstr(self.genes[g]['kME']))), file=f)
         return None
 
 

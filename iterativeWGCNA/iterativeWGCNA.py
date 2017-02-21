@@ -156,7 +156,7 @@ class IterativeWGCNA(object):
 
         self.genes.write('final-')
         self.eigengenes.write('final-')
-        self.transpose_output_files()
+        # self.transpose_output_files()
 
 
     def merge_close_modules_from_output(self, iteration):
@@ -242,7 +242,6 @@ class IterativeWGCNA(object):
         modules = self.genes.get_modules()
         self.__log_final_modules(modules)
 
-        base().print(self.eigengenes.matrix)
         self.eigengenes.load_matrix_from_file('eigengenes.txt')
         base().print(self.eigengenes.matrix)
         self.eigengenes.update_to_subset(modules)
