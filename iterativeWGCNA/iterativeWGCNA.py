@@ -71,14 +71,11 @@ class IterativeWGCNA(object):
         iterativeWGCNA output files
         exits to avoid accidental overwrite of earlier runs
         '''
-        conflictingFiles = set(('eigengene-connectivity.txt', 'eigengene-overview.pdf',
-                                'final-eigengenes.txt', 'eigengenes.txt', 'gene-counts.txt',
-                                'membership.txt', 'pre-pruning-eigengene-connectivity.txt',
-                                'pre-pruning-membership.txt'))
+        conflictingFiles = set(('final-eigengenes.txt', 'final-membership.txt'))
         files = set(os.listdir(self.args.workingDir))
         if len(files.intersection(conflictingFiles)) > 0:
             warning("Working Directory: " + self.args.workingDir \
-                               + " contains output from a prior run of iterativeWGCNA.  Exiting...")
+                               + " contains final output from a prior run of iterativeWGCNA.  Exiting...")
             sys.exit(1)
 
 
@@ -160,6 +157,7 @@ class IterativeWGCNA(object):
 
         self.__summarize_classification('final-')
         self.eigengenes.write('final-')
+        os.remove("eigengenes.txt")
 
 
     def merge_close_modules_from_output(self, iteration):
