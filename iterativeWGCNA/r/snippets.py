@@ -61,6 +61,27 @@ degree <- function(adjMatrix, members, threshold) {
 }
 
 
+# find close two closest modules given 
+findCloseModules <- function(similarityMatrix, cutHeight) {
+     returnVal <- NULL
+     d <- 1 - similarityMatrix
+     comparison <- d[d > 0 & d <= cutHeight]
+     modulesFound <- sum(comparison) > 0
+print(cutHeight)
+
+     print(d)
+     print(comparison)
+     print(modulesFound)
+print(min(comparison))
+     if (modulesFound) {
+         # indexes of closest modules
+         indexes <- which(d == min(comparison), arr.ind = TRUE)
+         returnVal <- list(m1 = row.names(d)[indexes[1,1]], m2 = row.names(d)[indexes[1,2]], dissimilarity = d[indexes[1,1], indexes[1,2]])
+     }
+    returnVal
+}
+
+
 # given WGCNA blocks, extracts and transposes eigengene matrix
 # labels columns (samples)
 # cleans up module names (removes the "ME")
@@ -69,7 +90,19 @@ extractEigengenes <- function(iteration, blocks, sampleNames) {
     eigengenes <- as.data.frame(t(blocks$MEs))
     colnames(eigengenes) <- sampleNames
     eigengenes <- eigengenes[row.names(eigengenes) != "ME0" & row.names(eigengenes) != "MEgrey", ]
-    row.names(eigengenes) <- gsub("ME", paste(iteration, "-", sep=""), row.names(eigengenes))
+    row.names(eigengenes) <- gsub("ME", paste(iteration, "_M", sep=""), row.names(eigengenes))
+    eigengenes
+}
+
+
+# extract eigengens from list object output
+# from moduleEigengenes function
+# label columns (samples)
+# clean up module names (remove the "ME")
+extractRecalculatedEigengenes <- function(elist, sampleNames) {
+   eigengenes <- as.data.frame(t(elist$eigengenes))
+   colnames(eigengenes) <- sampleNames
+    row.names(eigengenes) <- gsub("ME", "", row.names(eigengenes))
     eigengenes
 }
 

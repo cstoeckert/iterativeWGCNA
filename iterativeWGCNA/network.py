@@ -57,7 +57,7 @@ class Network(object):
         self.genes = genes.get_genes()
         self.classifiedGenes = genes.get_classified_genes()
         self.profiles = genes.profiles
-        self.kME = genes.get_gene_kME()
+        self.kME = genes.get_gene_kME() # TODO -- fix this -- this function has changed
         self.membership = genes.get_gene_membership()
 
         self.modules = genes.get_modules()
@@ -92,7 +92,7 @@ class Network(object):
                                               'density': 0.0}})
 
 
-    def build_from_file(self, profiles):
+    def build_from_file(self, profiles, adjacency=True):
         '''
         initialize Network from iterativeWGCNA output found in path
         '''
@@ -101,30 +101,31 @@ class Network(object):
 
         # when membership is loaded from file, modules and classified
         # genes are determined as well
-        self.__load_membership_from_file(self.args.prePruning)
-        self.__load_kme_from_file(self.args.prePruning)
-
+        self.__load_membership_from_file(self.args.preMerge)
+        self.__load_kme_from_file(self.args.preMerge)
+        warning("done")
+        
         self.eigengenes = Eigengenes()
         self.eigengenes.load_matrix_from_file("eigengenes-final.txt")
+        if adjacency:
+            self.__initialize_module_properties()
+            self.__assign_colors()
+            self.__generate_weighted_adjacency()
 
-        self.__initialize_module_properties()
 
-        self.__assign_colors()
-        self.__generate_weighted_adjacency()
-
-
-    def __load_membership_from_file(self, prePruned):
+    def __load_membership_from_file(self, preMerge):
         '''
         loads membership assignments from file
         and assembles list of classified genes
         and determines list of unique modules
         '''
-        fileName = "pre-pruning-membership.txt" if prePruned \
-                   else "membership.txt"
+        fileName = "membership.txt"
         membership = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                                header=True, row_names=1, as_is=True)
 
         finalIndex = membership.names.index('final')
+        if preMerge:
+            finalIndex = finalIndex - 1 
 
         self.membership = OrderedDict((gene, None) for gene in self.genes)
         self.classifiedGenes = []
@@ -142,16 +143,18 @@ class Network(object):
         self.modules = list(set(self.modules)) # gets unique list of modules
 
 
-    def __load_kme_from_file(self, prePruned):
+    def __load_kme_from_file(self, preMerge):
         '''
         loads kME to assigned module from file
         '''
-        fileName = "pre-pruning-eigengene-connectivity.txt" if prePruned \
-                   else "eigengene-connectivity.txt"
+        fileName = "eigengene-connectivity.txt"
         kME = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                         header=True, row_names=1, as_is=True)
 
         finalIndex = kME.names.index('final')
+        if preMerge:
+            finalIndex = finalIndex - 1
+            
         self.kME = OrderedDict((gene, None) for gene in self.genes)
         for g in self.genes:
             self.kME[g] = kME.rx(g, finalIndex)[0]

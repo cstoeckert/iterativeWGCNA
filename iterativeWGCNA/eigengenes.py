@@ -4,11 +4,14 @@
 manage eigengenes
 '''
 
+from __future__ import print_function
+
 import logging
 
 import rpy2.robjects as ro
 from .r.imports import base, stats, rsnippets
 from .io.utils import write_data_frame
+from .wgcna import WgcnaManager
 
 class Eigengenes(object):
     '''
@@ -51,21 +54,27 @@ class Eigengenes(object):
                                                 header=True, row_names=1)
 
 
-    def write(self, isFinal=False):
+    def write(self, prefix=''):
         '''
         writes the eigengene matrix to file
         '''
-        fileName = 'eigengenes-final.txt' if isFinal else 'eigengenes.txt'
+        fileName = prefix + 'eigengenes.txt'
         write_data_frame(self.matrix, fileName, 'Module')
 
 
-    def similarity(self, module):
+    def similarity(self, module=None):
         '''
         calculate similarity between eigengene for a specific
         module and all the other eigengenes
+
+        if no module is specified, calculate the similarity matrix
+        between all eigengenes
         '''
-        sim = base().as_data_frame(stats().cor(base().t(self.matrix), \
-                                               base().t(self.matrix.rx(module, True))))
+        if module is None:
+            sim = base().as_data_frame(stats().cor(base().t(self.matrix)))
+        else:
+            sim = base().as_data_frame(stats().cor(base().t(self.matrix), \
+                                            base().t(self.matrix.rx(module, True))))
         return sim
 
 
@@ -115,3 +124,12 @@ class Eigengenes(object):
         update matrix to subset specified by modules
         '''
         self.matrix = self.extract_subset(modules)
+
+
+    def recalculate(self, profiles, membership, power=6):
+        '''
+        recalculate eigengenes given membership
+        and profiles
+        '''
+        manager = WgcnaManager(profiles, {'power':power})
+        self.matrix = rsnippets.extractRecalculatedEigengenes(manager.module_eigengenes(membership.values()), self.samples())

@@ -5,10 +5,25 @@ from __future__ import print_function
 from __future__ import with_statement
 
 from sys import stderr
+from math import isnan
 import os
 import re
 import rpy2.robjects as ro
 from ..r.imports import rsnippets
+
+
+def xstr(value):
+    '''
+    handle nulls/nan in string conversion
+    '''
+    if value is None:
+        return ''
+    if value == 'NULL':
+        return ''
+    if isnan(value):
+        return 'NA'
+
+    return str(value)
 
 
 def warning(*objs):
@@ -46,7 +61,7 @@ def write_data_frame(df, fileName, rowLabel):
     finally:
         df.to_csvfile(fileName, quote=False, sep='\t', col_names=False, append=True)
 
-
+        
 def read_data(fileName):
     '''
     read gene expression data into a data frame

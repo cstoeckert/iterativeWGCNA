@@ -128,7 +128,7 @@ def parse_command_line_args():
 
     parser.add_argument('-o', '--workingDir',
                         help="R working directory; where output will be saved",
-                        metavar='<output dir>',
+                        metavar='<output dir>', 
                         default=getcwd())
 
     parser.add_argument('-v', '--verbose',
@@ -147,15 +147,19 @@ def parse_command_line_args():
                         help="enable WGCNA to use threading;\nsee WGCNA manual",
                         action='store_true')
 
-    parser.add_argument('--saveBlocks',
-                        help="save WGNCA blockwise modules for each iteration",
+    parser.add_argument('--skipSaveBlocks',
+                        help="do not save WGNCA blockwise modules for each iteration;\n"
+                        + "NOTE: without blocks summary graphics cannot be generated.",
                         action='store_true')
+
+    parser.add_argument('-f', '--finalMergeCutHeight',
+                        help="cut height for final merge (after iterations are assembled)",
+                        default=0.05,
+                        metavar='<cut height>',
+                        type=restricted_float)
 
     args = parser.parse_args()
     args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
-    args.generateNetworkSummary = 'all' # generate all summaries
-    # set edge weight to the minKME
-    args.edgeWeight = args.wgcnaParameters['minKMEtoStay']
 
     return args
 
@@ -170,10 +174,10 @@ def set_wgcna_parameter_defaults(params):
     if params is None:
         params = {}
 
+    params['numericLabels'] = True # override user choice
+        
     if 'networkType' not in params:
         params['networkType'] = 'signed'
-    if 'numericLabels' not in params:
-        params['numericLabels'] = True
     if 'minKMEtoStay' not in params:
         params['minKMEtoStay'] = 0.8
     if 'minCoreKME' not in params:
@@ -184,8 +188,7 @@ def set_wgcna_parameter_defaults(params):
         params['reassignThreshold'] = 0.000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
-    if 'mergeCutHeight' not in params:
-        params['mergeCutHeight'] = 0.15
+  
 
     return params
 
@@ -254,11 +257,66 @@ def parse_summary_command_line_args():
                         + "connections supported by a correlation >= threshold",
                         type=restricted_float)
 
-    parser.add_argument('-n', '--prePruning',
+    parser.add_argument('-preMerge',
                         action='store_true',
-                        help="use pre-pruning membership")
+                        help="use membership from final iteration (before merging)")
 
     return parser.parse_args()
+
+
+
+def parse_adjust_merge_command_line_args():
+    '''
+    parse command line args for adjusting the merge
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA network summary',
+                                     description="regenerate final merge",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--inputFile',
+                        metavar='<gene expression file>',
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+  
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
+                        action='store_true')
+
+    parser.add_argument('--mergeCutHeight',
+                        metavar='<cut height>',
+                        default=0.15,
+                        help="max dissimilarity (dendrogram cut height)\n"
+                        + "between eigengenes for merging",
+                        type=restricted_float)
+
+    parser.add_argument('--reassignThreshold',
+                        metavar='<reassign threshold>',
+                        default=0.000001,
+                        help="p-value for reassigning genes to modules\n",
+                        type=restricted_float)
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.85,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
+     
+    return parser.parse_args()
+
 
 
 def parse_iteration_summary_command_line_args():
