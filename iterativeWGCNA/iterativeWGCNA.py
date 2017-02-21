@@ -19,26 +19,29 @@ from .expression import Expression
 from .eigengenes import Eigengenes
 from .network import Network
 from .wgcna import WgcnaManager
-from .io.utils import create_dir, read_data, warning, transpose_file_contents, write_data_frame
+from .io.utils import create_dir, read_data, warning, write_data_frame
 from .r.imports import base, wgcna, rsnippets
 
 
 class IterativeWGCNA(object):
     '''
     main application
+
+    flag report = True when generating
+    result from existing output
     '''
 
-    def __init__(self, args, summaryOnly=False):
+    def __init__(self, args, report=False):
         self.args = args
         create_dir(self.args.workingDir)
-        if not summaryOnly:
+        if not report:
             self.__verify_clean_working_dir()
 
-        self.__initialize_log(summaryOnly)
+        self.__initialize_log(report)
         self.logger.info(strftime("%c"))
 
-        self.__initialize_R(summaryOnly)
-        if not summaryOnly:
+        self.__initialize_R(report)
+        if not report:
             self.__log_parameters()
 
         # load expression data and
@@ -48,7 +51,7 @@ class IterativeWGCNA(object):
         self.__load_expression_profiles()
         self.__log_input_data()
 
-        if not summaryOnly:
+        if not report:
             self.genes = None
             self.eigengenes = Eigengenes()
             self.modules = None # hash of module name to color for plotting
@@ -106,6 +109,7 @@ class IterativeWGCNA(object):
             # then the pass has converged
             if classifiedGeneCount == len(iterationGenes):
                 self.passConverged = True
+                self.__summarize_classification(passDirectory + '/')
             else:
                 # run again with genes classified in current pass
                 iterationGenes = self.genes.get_classified_genes(iterationGenes)
@@ -147,16 +151,15 @@ class IterativeWGCNA(object):
                 # reset pass convergence flag
                 self.passConverged = False
 
-        self.iteration = 'final'
+        self.iteration = 'FINAL'
         self.genes.iteration = self.iteration
         self.merge_close_modules()
         self.reassign_genes_to_best_fit_module()
 
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
 
-        self.genes.write('final-')
+        self.__summarize_classification('final-')
         self.eigengenes.write('final-')
-        # self.transpose_output_files()
 
 
     def merge_close_modules_from_output(self, iteration):
@@ -201,20 +204,6 @@ class IterativeWGCNA(object):
                 self.logger.info(strftime("%c"))
 
 
-    def transpose_output_files(self):
-        '''
-        transpose output files to make them human
-        readable
-        '''
-        if self.args.verbose:
-            warning("Generating final output")
-
-        # transpose membership and kME files (so samples are columns)
-        transpose_file_contents('pre-pruning-membership.txt', 'Gene')
-        transpose_file_contents('membership.txt', 'Gene')
-        transpose_file_contents('eigengene-connectivity.txt', 'Gene')
-
-
     def reassign_genes_to_best_fit_module(self):
         '''
         use kME goodness of fit to reassign module
@@ -243,12 +232,10 @@ class IterativeWGCNA(object):
         self.__log_final_modules(modules)
 
         self.eigengenes.load_matrix_from_file('eigengenes.txt')
-        base().print(self.eigengenes.matrix)
         self.eigengenes.update_to_subset(modules)
-        base().print(self.eigengenes.matrix)
-        
+
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
-                                                         self.args.wgcnaParameters['mergeCutHeight'])
+                                                         self.args.finalMergeCutHeight)
 
 
     def run_iteration(self, iterationGenes):
@@ -267,8 +254,9 @@ class IterativeWGCNA(object):
         iterationProfiles = self.profiles.gene_expression(iterationGenes)
 
         blocks = self.run_blockwise_wgcna(iterationProfiles)
-        if self.args.saveBlocks:
-            rsnippets.saveBlockResult(blocks, iterationProfiles, os.path.join(iterationDir, 'blocks_' + self.iteration + '.RData'))
+        if not self.args.skipSaveBlocks:
+            rsnippets.saveBlockResult(blocks, iterationProfiles,
+                                      os.path.join(iterationDir, 'wgcna-blocks.RData'))
 
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
@@ -279,16 +267,31 @@ class IterativeWGCNA(object):
         if not self.eigengenes.is_empty():
             self.eigengenes.write() # need to keep single file across all iterations
             self.eigengenes.write(iterationDir + '/')
-            
+
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
             self.genes.update_kME(self.eigengenes, iterationGenes)
-            self.genes.write(os.path.join(iterationDir, 'wgcna-'))
+            self.__summarize_classification(os.path.join(iterationDir, 'wgcna-'))
 
             self.genes.evaluate_fit(self.args.wgcnaParameters['minKMEtoStay'],
                                     iterationGenes)
             self.genes.remove_small_modules(self.args.wgcnaParameters['minModuleSize'])
-            self.genes.write(os.path.join(iterationDir, 'ec-pruned-')) # output after pruning
+            self.__summarize_classification(os.path.join(iterationDir, ''), True)
+
+
+    def __summarize_classification(self, prefix, inclCounts=False):
+        '''
+        output gene summaries for the iteration
+        incl: text summary of iteration, updated gene membership, kme histogram
+        '''
+        if 'final' in prefix:
+            self.genes.write(prefix)
+        else:
+            self.genes.write(prefix, self.iteration)
+        self.genes.plot_kme_histogram(self.iteration, prefix,
+                                      self.args.wgcnaParameters['minKMEtoStay'])
+        if inclCounts:
+            self.genes.write_iteration_counts(prefix)
 
 
     def run_blockwise_wgcna(self, exprData):
@@ -318,7 +321,7 @@ class IterativeWGCNA(object):
             sys.exit(1)
 
 
-    def __initialize_R(self, summaryOnly=False):
+    def __initialize_R(self, report=False):
         '''
         initialize R workspace and logs
         '''
@@ -329,7 +332,7 @@ class IterativeWGCNA(object):
         ro.r['options'](warn=-1)
 
         # r log
-        logFile = 'summarize-network-R.log' if summaryOnly \
+        logFile = 'summarize-network-R.log' if report \
           else 'iterativeWGCNA-R.log'
         rLogger = base().file(logFile, open='wt')
         base().sink(rLogger, type=base().c('output', 'message'))
@@ -375,9 +378,8 @@ class IterativeWGCNA(object):
 
         self.logger.info("Working directory: " + self.args.workingDir)
         self.logger.info("Saving blocks for each iteration? "
-                         + ("TRUE" if self.args.saveBlocks else "FALSE"))
-        self.logger.info("Merging final modules if cutHeight <= "
-                         + str(self.args.wgcnaParameters['mergeCutHeight']))
+                         + ("FALSE" if self.args.skipSaveBlocks else "TRUE"))
+        self.logger.info("Merging final modules if cutHeight <= " + str(self.args.finalMergeCutHeight))
         self.logger.info("Allowing WGCNA Threads? "
                          + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
         self.logger.info("Running WGCNA with the following params:")
@@ -387,6 +389,7 @@ class IterativeWGCNA(object):
             warning("Working directory: " + self.args.workingDir)
             warning("Allowing WGCNA Threads? "
                     + ("TRUE" if self.args.enableWGCNAThreads else "FALSE"))
+            warning("Merging final modules if cutHeight <= " + str(self.args.finalMergeCutHeight))
             warning("Running WGCNA with the following params:")
             warning(self.args.wgcnaParameters)
 

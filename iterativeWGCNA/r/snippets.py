@@ -94,6 +94,18 @@ extractEigengenes <- function(iteration, blocks, sampleNames) {
     eigengenes
 }
 
+
+# extract eigengens from list object output
+# from moduleEigengenes function
+# label columns (samples)
+# clean up module names (remove the "ME")
+extractRecalculatedEigengenes <- function(elist, sampleNames) {
+   eigengenes <- as.data.frame(t(elist$eigengenes))
+   colnames(eigengenes) <- sampleNames
+    row.names(eigengenes) <- gsub("ME", "", row.names(eigengenes))
+    eigengenes
+}
+
 # given WGCNA blocks and gene names, returns
 # a data frame with modules mapped to gene names
 extractModules <- function(blocks, geneNames) {

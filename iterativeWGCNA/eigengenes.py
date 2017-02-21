@@ -4,11 +4,14 @@
 manage eigengenes
 '''
 
+from __future__ import print_function
+
 import logging
 
 import rpy2.robjects as ro
 from .r.imports import base, stats, rsnippets
 from .io.utils import write_data_frame
+from .wgcna import WgcnaManager
 
 class Eigengenes(object):
     '''
@@ -121,3 +124,12 @@ class Eigengenes(object):
         update matrix to subset specified by modules
         '''
         self.matrix = self.extract_subset(modules)
+
+
+    def recalculate(self, profiles, membership, power=6):
+        '''
+        recalculate eigengenes given membership
+        and profiles
+        '''
+        manager = WgcnaManager(profiles, {'power':power})
+        self.matrix = rsnippets.extractRecalculatedEigengenes(manager.module_eigengenes(membership.values()), self.samples())

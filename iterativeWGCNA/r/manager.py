@@ -142,7 +142,8 @@ class RManager(object):
         plot histogram with vline at x=vline
         '''
         self.params['x'] = ro.FloatVector(self.data)
-
+        self.params['labels'] = False
+        
         if params is not None:
             self.params.update(params)
 
