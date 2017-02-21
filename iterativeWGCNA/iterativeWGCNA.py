@@ -242,10 +242,11 @@ class IterativeWGCNA(object):
         modules = self.genes.get_modules()
         self.__log_final_modules(modules)
 
+        base().print(self.eigengenes.matrix)
         self.eigengenes.load_matrix_from_file('eigengenes.txt')
-        warning(self.eigengenes.matrix)
+        base().print(self.eigengenes.matrix)
         self.eigengenes.update_to_subset(modules)
-        warning(self.eigengenes.matrix)
+        base().print(self.eigengenes.matrix)
         
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
                                                          self.args.wgcnaParameters['mergeCutHeight'])
@@ -278,7 +279,8 @@ class IterativeWGCNA(object):
 
         if not self.eigengenes.is_empty():
             self.eigengenes.write() # need to keep single file across all iterations
-
+            self.eigengenes.write(iterationDir + '/')
+            
             # extract membership from blocks and calc eigengene connectivity
             self.genes.update_membership(iterationGenes, blocks)
             self.genes.update_kME(self.eigengenes, iterationGenes)

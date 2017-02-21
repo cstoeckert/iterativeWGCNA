@@ -204,6 +204,8 @@ class Genes(object):
         modules = self.get_modules()
         for m in modules:
             moduleEigengene = eigengenes.get_module_eigengene(m)
+            base().print(m)
+            base().print(moduleEigengene)
             self.__update_module_kME(m, moduleEigengene, genes)
 
 
