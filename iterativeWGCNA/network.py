@@ -57,7 +57,7 @@ class Network(object):
         self.genes = genes.get_genes()
         self.classifiedGenes = genes.get_classified_genes()
         self.profiles = genes.profiles
-        self.kME = genes.get_gene_kME()
+        self.kME = genes.get_gene_kME() # TODO -- fix this -- this function has changed
         self.membership = genes.get_gene_membership()
 
         self.modules = genes.get_modules()

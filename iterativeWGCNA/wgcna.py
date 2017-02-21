@@ -162,6 +162,22 @@ class WgcnaManager(RManager):
         wgcna().TOMplot(**params)
 
 
+    def module_eigengenes(self, membership):
+        '''
+        wrapper for moduleEigengenes function
+        calculates eigengenes from profiles &
+        module membership (gene -> membership dict)
+        '''
+
+        params = {}
+        params['softPower'] = self.params['power'] if 'power' in self.params else 6
+        params['expr'] = base().as_data_frame(self.transpose_data())
+        params['colors'] = ro.StrVector(membership)
+
+        return wgcna().moduleEigengenes(**params)
+        
+
+
     def plot_eigengene_network(self):
         '''
         wrapper for plotEigengeneNetworks function

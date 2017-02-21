@@ -3,6 +3,7 @@
 '''
 manage genes
 '''
+from __future__ import print_function
 
 import logging
 from collections import OrderedDict
@@ -13,8 +14,9 @@ import rpy2.robjects as ro
 # from .expression import Expression
 from .analysis import calculate_kME
 from .eigengenes import Eigengenes
-from .r.imports import wgcna, stats, base, rsnippets
-from .io.utils import write_data_frame
+from .r.imports import wgcna, stats, base, rsnippets, grdevices
+from .io.utils import xstr
+from .r.manager import RManager
 
 class Genes(object):
     '''
@@ -31,7 +33,10 @@ class Genes(object):
         '''
         self.logger = logging.getLogger('iterativeWGCNA.Genes')
         self.profiles = exprData
-        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED', 'kME':float('NaN')}) for geneId in self.profiles.genes())
+        self.genes = OrderedDict((geneId, {'module': 'UNCLASSIFIED',
+                                           'kME':float('NaN'),
+                                           'iteration': None})
+                                 for geneId in self.profiles.genes())
 
         self.size = len(self.genes)
         self.iteration = None
@@ -63,6 +68,18 @@ class Genes(object):
             return False
 
 
+    def __update_classified_iteration(self, gene, iteration):
+        '''
+        set the iteration during which
+        a gene was first classified
+        '''
+        if gene in self.genes:
+            self.genes[gene]['iteration'] = iteration
+            return True
+        else:
+            return False
+
+
     def update_membership(self, genes, blocks):
         '''
         fetches new module membership from WGCNA
@@ -80,7 +97,8 @@ class Genes(object):
             if module in ('0', 'grey'):
                 module = 'UNCLASSIFIED'
             else:
-                module = self.iteration + '-' + module
+                module = self.iteration + '_' + 'M' + str(module)
+                self.__update_classified_iteration(gene, self.iteration)
             self.__update_module(gene, module)
 
         return None
@@ -95,6 +113,23 @@ class Genes(object):
             self.__update_module(gene, module)
 
 
+    def __extract_iteration_genes(self, targetIteration):
+        '''
+        get genes classified during specified interation
+        '''
+        assignedIterations = self.__extract_classified_iteration()
+        return [gene for gene, iteration in assignedIterations.items()
+                if iteration == targetIteration]
+
+
+    def __extract_classified_iteration(self):
+        '''
+        get classified iteration as an ordered dict
+        '''
+        return OrderedDict((gene, membership['iteration'])
+                           for gene, membership in self.genes.items())
+
+
     def __extract_modules(self):
         '''
         extract module membership as an ordered dict
@@ -102,11 +137,18 @@ class Genes(object):
         return OrderedDict((gene, membership['module']) for gene, membership in self.genes.items())
 
 
-    def get_gene_membership(self):
+    def get_gene_membership(self, genes=None):
         '''
-        public facing method for getting gene membership
+        public facing method for getting gene membership; returns a
+        gene -> membership hash
+
+        if gene list is provided, return only the membership assignment
+        for the provided genes
         '''
-        return self.__extract_modules()
+        if genes is None:
+            return self.__extract_modules()
+        else:
+            return OrderedDict((gene, module) for gene, module in self.__extract_modules().items() if gene in genes)
 
 
     def get_gene_kME(self):
@@ -114,6 +156,16 @@ class Genes(object):
         public facing method for getting all gene kMEs
         '''
         return self.__extract_kME()
+
+
+    def get_iteration_kME(self, iteration):
+        '''
+        return kME for all assignments made
+        during current iteration
+        '''
+        iterationGenes = self.__extract_iteration_genes(iteration)
+        geneKME = self.__extract_kME()
+        return [kME for gene, kME in geneKME.items() if gene in iterationGenes]
 
 
     def get_module_kME(self, targetModule):
@@ -138,16 +190,6 @@ class Genes(object):
         as an ordered dict
         '''
         return OrderedDict((gene, membership['kME']) for gene, membership in self.genes.items())
-
-
-    def __write_modules(self, prefix=''):
-        '''
-        writes the gene memebership to a file
-        '''
-        df = ro.DataFrame(self.__extract_modules())
-        df.rownames = (self.iteration)
-        write_data_frame(df, prefix + "membership.txt", 'Iteration')
-        return None
 
 
     def __update_kME(self, gene, kME):
@@ -187,26 +229,63 @@ class Genes(object):
             self.__update_module_kME(m, moduleEigengene, genes)
 
 
-    def __write_kME(self, prefix=''):
-        '''
-        writes eigengene connectivity (kME)
-        to a file
-        '''
-        df = ro.DataFrame(self.__extract_kME())
-        df.rownames = (self.iteration)
-     
-        write_data_frame(df, prefix + "eigengene-connectivity.txt", 'Iteration')
-        return None
-
-
-    def write(self, prefix=''):
+    def write(self, prefix='', iteration=None):
         '''
         writes the membership and eigengene connectivity
         to files
+        filtering for specific iteration if specified
         '''
-        self.__write_modules(prefix)
-        self.__write_kME(prefix)
+        summaryGenes = None
+        if iteration is None:
+            summaryGenes = self.genes
+        else:
+            iterationGenes = self.__extract_iteration_genes(iteration)
+            summaryGenes = {gene:membership for gene, membership
+                            in self.genes.items()
+                            if gene in iterationGenes
+                            and membership['module'] != 'UNCLASSIFIED'}
+
+        with open(prefix + 'membership.txt', 'w') as f:
+            print('\t'.join(('Gene', 'Module', 'kME')), file=f)
+            for g in summaryGenes:
+                print('\t'.join((g, self.genes[g]['module'], xstr(self.genes[g]['kME']))), file=f)
         return None
+
+
+    def write_iteration_counts(self, prefix=''):
+        '''
+        print iteration summary
+        '''
+        with open(prefix + 'summary.txt', 'w') as f:
+            print('\t'.join(('N Input Genes', 'N Classified Genes',
+                             'N Residual Genes', 'N Detected Modules')), file=f)
+            numClassifiedGenes = self.count_classified_genes()
+            print('\t'.join((str(self.size),
+                             str(numClassifiedGenes),
+                             str(self.size - numClassifiedGenes),
+                             str(self.count_modules(self.get_classified_genes())))), file=f)
+
+
+    def plot_kme_histogram(self, iteration, prefix='', vline=0.80):
+        '''
+        generate kme histogram for genes classified in
+        current iteration
+        '''
+        kmeVector = None
+        if 'final' in prefix:
+            classifiedGenes = self.get_classified_genes()
+            geneKME = self.__extract_kME()
+            kmeVector = [kME for gene, kME in geneKME.items() if gene in classifiedGenes]
+        else:
+            kmeVector = self.get_iteration_kME(iteration)
+
+        if kmeVector is not None:
+            if len(kmeVector) != 0:
+                manager = RManager(kmeVector)
+                grdevices().pdf(prefix + "kme_histogram.pdf")
+                manager.histogram(vline, {'main': 'Gene -> Assigned Module kME for iteration ' + iteration,
+                                          'xlab': 'kME', 'ylab':'Gene Count'})
+                grdevices().dev_off()
 
 
     def count_module_members(self, genes=None):
@@ -290,17 +369,18 @@ class Genes(object):
             if memberCount[geneModule] < minModuleSize:
                 self.__update_module(g, 'UNCLASSIFIED')
                 self.__update_kME(g, float('NaN'))
+                self.__update_classified_iteration(g, None)
 
 
-    def get_modules(self):
+    def get_modules(self, genes=None):
         '''
-        gets list of modules from gene membership assignments
+        gets list of unique modules from gene membership assignments
         '''
         # get unique members by converting values to a set
         membership = set(self.__extract_modules().values())
         membership.discard('UNCLASSIFIED')
         return list(membership)
-
+    
 
     def get_module_members(self, targetModule):
         '''
@@ -335,13 +415,15 @@ class Genes(object):
 
             if module == 'UNCLASSIFIED':
                 self.__update_kME(g, float('NaN'))
+                self.__update_classified_iteration(g, None)
 
             if kME < minKMEtoStay:
                 self.__update_module(g, 'UNCLASSIFIED')
                 self.__update_kME(g, float('NaN'))
+                self.__update_classified_iteration(g, None)
 
 
-    def merge_close_modules(self, eigengenes, cutHeight):
+    def merge_close_modules(self, eigengenes, cutHeight, power=6):
         '''
         merge close modules based on similarity between
         eigengenes
@@ -353,6 +435,8 @@ class Genes(object):
         noMergesFound = False
         mergeCount = 0
         modules = self.get_modules()
+        classifiedGenes = self.get_classified_genes()
+        classifiedGeneProfiles = self.profiles.gene_expression(classifiedGenes)
         while not noMergesFound:
             # compare modules, finding min dissimilarity
             similarity = eigengenes.similarity(None)
@@ -362,17 +446,18 @@ class Genes(object):
                 m2 = closeModules.rx2('m2')[0]
                 dissimilarity = closeModules.rx2('dissimilarity')[0]
                 mergeCount = mergeCount + 1
-                self.logger.info("Merging " + m1 + " and " + m2
+                self.logger.info("Merging " + m1 + " into " + m2
                                  + " (D = " + str(dissimilarity) + ")")
 
                 memberGenes = self.get_module_members(m1)
                 for g in memberGenes:
                     self.__update_module(g, m2)
+                    self.__update_classified_iteration(g, 'FINAL_MERGE')
                 self.__update_module_kME(m1, eigengenes.get_module_eigengene(m2))
 
                 modules = self.get_modules()
-                eigengenes.update_to_subset(modules) # update eigengenes to reflect new list
-                # recalculate eigengenes instead of updating
+                eigengenes.recalculate(classifiedGeneProfiles,
+                                       self.get_gene_membership(classifiedGenes))
 
             else:
                 noMergesFound = True
@@ -382,7 +467,7 @@ class Genes(object):
 
         return eigengenes
 
-    
+
     def reassign_to_best_fit(self, eigengenes, reassignThreshold, minKMEtoStay):
         '''
         Evaluate eigengene connectivity (kME)
