@@ -1,4 +1,4 @@
-name: C:\Users\j\Anaconda2\envs\iterativeWGCNA
+name: /CHANGE-TO-YOUR/Anaconda2/envs/iterativeWGCNA
 channels:
 - !!python/unicode
   'anaconda-fusion'
@@ -462,5 +462,5 @@ dependencies:
   - jupyter-core==4.3.0
   - prompt-toolkit==1.0.9
   - win-unicode-console==0.5
-prefix: C:\Users\j\Anaconda2\envs\iterativeWGCNA
+prefix: /CHANGE-TO-YOUR/Anaconda2/envs/iterativeWGCNA
 
