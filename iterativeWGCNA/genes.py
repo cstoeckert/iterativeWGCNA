@@ -423,7 +423,7 @@ class Genes(object):
                 self.__update_classified_iteration(g, None)
 
 
-    def merge_close_modules(self, eigengenes, cutHeight)
+    def merge_close_modules(self, eigengenes, cutHeight):
         '''
         merge close modules based on similarity between
         eigengenes
