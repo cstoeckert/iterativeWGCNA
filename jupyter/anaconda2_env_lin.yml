@@ -1,4 +1,4 @@
-name: /CHANGE-TO-YOUR/Anaconda2/envs/iterativeWGCNA
+name: iterativeWGCNA
 channels:
 - !!python/unicode
   'anaconda-fusion'
@@ -12,11 +12,17 @@ dependencies:
 - !!python/unicode
   'bleach=1.5.0=py27_0'
 - !!python/unicode
-  'colorama=0.3.7=py27_0'
+  'bzip2=1.0.6=3'
+- !!python/unicode
+  'cairo=1.14.8=0'
 - !!python/unicode
   'configparser=3.5.0=py27_0'
 - !!python/unicode
+  'curl=7.52.1=0'
+- !!python/unicode
   'cycler=0.10.0=py27_0'
+- !!python/unicode
+  'dbus=1.10.10=0'
 - !!python/unicode
   'decorator=4.0.11=py27_0'
 - !!python/unicode
@@ -24,13 +30,31 @@ dependencies:
 - !!python/unicode
   'enum34=1.1.6=py27_0'
 - !!python/unicode
+  'expat=2.1.0=0'
+- !!python/unicode
+  'fontconfig=2.12.1=3'
+- !!python/unicode
+  'freetype=2.5.5=2'
+- !!python/unicode
   'functools32=3.2.3.2=py27_0'
 - !!python/unicode
   'get_terminal_size=1.0.0=py27_0'
 - !!python/unicode
+  'glib=2.50.2=1'
+- !!python/unicode
+  'gmp=6.1.0=0'
+- !!python/unicode
+  'gsl=2.2.1=0'
+- !!python/unicode
+  'gst-plugins-base=1.8.0=0'
+- !!python/unicode
+  'gstreamer=1.8.0=0'
+- !!python/unicode
+  'harfbuzz=0.9.39=2'
+- !!python/unicode
   'html5lib=0.999=py27_0'
 - !!python/unicode
-  'icu=57.1=vc9_0'
+  'icu=54.1=0'
 - !!python/unicode
   'ipykernel=4.5.2=py27_0'
 - !!python/unicode
@@ -38,9 +62,11 @@ dependencies:
 - !!python/unicode
   'ipython_genutils=0.1.0=py27_0'
 - !!python/unicode
+  'jbig=2.1=0'
+- !!python/unicode
   'jinja2=2.9.5=py27_0'
 - !!python/unicode
-  'jpeg=9b=vc9_0'
+  'jpeg=9b=0'
 - !!python/unicode
   'jsonschema=2.5.1=py27_0'
 - !!python/unicode
@@ -48,103 +74,21 @@ dependencies:
 - !!python/unicode
   'jupyter_core=4.3.0=py27_0'
 - !!python/unicode
-  'libpng=1.6.27=vc9_0'
+  'libffi=3.2.1=1'
 - !!python/unicode
-  'm2w64-bwidget=1.9.10=2'
+  'libgcc=5.2.0=0'
 - !!python/unicode
-  'm2w64-bzip2=1.0.6=6'
+  'libiconv=1.14=0'
 - !!python/unicode
-  'm2w64-c-ares=1.11.0=2'
+  'libpng=1.6.27=0'
 - !!python/unicode
-  'm2w64-ca-certificates=20150426=103'
+  'libsodium=1.0.10=0'
 - !!python/unicode
-  'm2w64-curl=7.48.0=2'
+  'libtiff=4.0.6=3'
 - !!python/unicode
-  'm2w64-expat=2.1.1=2'
+  'libxcb=1.12=1'
 - !!python/unicode
-  'm2w64-fftw=3.3.4=6'
-- !!python/unicode
-  'm2w64-flac=1.3.1=3'
-- !!python/unicode
-  'm2w64-gcc-libgfortran=5.3.0=6'
-- !!python/unicode
-  'm2w64-gcc-libs=5.3.0=7'
-- !!python/unicode
-  'm2w64-gcc-libs-core=5.3.0=7'
-- !!python/unicode
-  'm2w64-gettext=0.19.7=2'
-- !!python/unicode
-  'm2w64-gmp=6.1.0=2'
-- !!python/unicode
-  'm2w64-gnutls=3.4.11=2'
-- !!python/unicode
-  'm2w64-gsl=2.1=2'
-- !!python/unicode
-  'm2w64-jansson=2.7=3'
-- !!python/unicode
-  'm2w64-libffi=3.2.1=4'
-- !!python/unicode
-  'm2w64-libiconv=1.14=6'
-- !!python/unicode
-  'm2w64-libidn=1.32=4'
-- !!python/unicode
-  'm2w64-libjpeg-turbo=1.4.2=3'
-- !!python/unicode
-  'm2w64-libmetalink=0.1.3=2'
-- !!python/unicode
-  'm2w64-libogg=1.3.2=3'
-- !!python/unicode
-  'm2w64-libpng=1.6.21=2'
-- !!python/unicode
-  'm2w64-libsndfile=1.0.26=2'
-- !!python/unicode
-  'm2w64-libssh2=1.7.0=2'
-- !!python/unicode
-  'm2w64-libsystre=1.0.1=3'
-- !!python/unicode
-  'm2w64-libtasn1=4.7=2'
-- !!python/unicode
-  'm2w64-libtiff=4.0.6=2'
-- !!python/unicode
-  'm2w64-libtre-git=122.c2f5d13=5'
-- !!python/unicode
-  'm2w64-libvorbis=1.3.5=2'
-- !!python/unicode
-  'm2w64-libwinpthread-git=5.0.0.4634.697f757=2'
-- !!python/unicode
-  'm2w64-libxml2=2.9.3=3'
-- !!python/unicode
-  'm2w64-mpfr=3.1.4=4'
-- !!python/unicode
-  'm2w64-nettle=3.1.1=4'
-- !!python/unicode
-  'm2w64-nghttp2=1.9.2=2'
-- !!python/unicode
-  'm2w64-nlopt=2.4.2=3'
-- !!python/unicode
-  'm2w64-openssl=1.0.2.g=2'
-- !!python/unicode
-  'm2w64-p11-kit=0.23.2=2'
-- !!python/unicode
-  'm2w64-pcre=8.38=2'
-- !!python/unicode
-  'm2w64-rtmpdump-git=499.a107cef=4'
-- !!python/unicode
-  'm2w64-speex=1.2rc2=3'
-- !!python/unicode
-  'm2w64-speexdsp=1.2rc3=3'
-- !!python/unicode
-  'm2w64-tcl=8.6.5=3'
-- !!python/unicode
-  'm2w64-tk=8.6.5=3'
-- !!python/unicode
-  'm2w64-tktable=2.10=5'
-- !!python/unicode
-  'm2w64-wineditline=2.101=5'
-- !!python/unicode
-  'm2w64-xz=5.2.2=2'
-- !!python/unicode
-  'm2w64-zlib=1.2.8=10'
+  'libxml2=2.9.4=0'
 - !!python/unicode
   'markupsafe=0.23=py27_2'
 - !!python/unicode
@@ -154,31 +98,43 @@ dependencies:
 - !!python/unicode
   'mkl=2017.0.1=0'
 - !!python/unicode
-  'msys2-conda-epoch=20160418=1'
-- !!python/unicode
   'nbconvert=5.1.1=py27_0'
 - !!python/unicode
   'nbformat=4.3.0=py27_0'
 - !!python/unicode
-  'notebook=4.3.1=py27_1'
+  'ncurses=5.9=10'
+- !!python/unicode
+  'notebook=4.3.1=py27_0'
 - !!python/unicode
   'numpy=1.12.0=py27_0'
 - !!python/unicode
-  'openssl=1.0.2k=vc9_0'
+  'openssl=1.0.2k=0'
 - !!python/unicode
-  'pandoc=1.19.2.1=0'
+  'pandoc=1.15.0.6=0'
 - !!python/unicode
   'pandocfilters=1.4.1=py27_0'
+- !!python/unicode
+  'pango=1.40.3=1'
 - !!python/unicode
   'path.py=10.1=py27_0'
 - !!python/unicode
   'pathlib2=2.2.0=py27_0'
 - !!python/unicode
+  'pcre=8.39=1'
+- !!python/unicode
+  'pexpect=4.2.1=py27_0'
+- !!python/unicode
   'pickleshare=0.7.4=py27_0'
 - !!python/unicode
   'pip=9.0.1=py27_1'
 - !!python/unicode
+  'pixman=0.34.0=0'
+- !!python/unicode
   'prompt_toolkit=1.0.9=py27_0'
+- !!python/unicode
+  'ptyprocess=0.5.1=py27_0'
+- !!python/unicode
+  'pycairo=1.10.0=py27_0'
 - !!python/unicode
   'pygments=2.2.0=py27_0'
 - !!python/unicode
@@ -194,7 +150,7 @@ dependencies:
 - !!python/unicode
   'pyzmq=16.0.2=py27_0'
 - !!python/unicode
-  'qt=5.6.2=vc9_3'
+  'qt=5.6.2=3'
 - !!python/unicode
   'r=3.3.2=r3.3.2_0'
 - !!python/unicode
@@ -202,7 +158,7 @@ dependencies:
 - !!python/unicode
   'r-backports=1.0.4=r3.3.2_0'
 - !!python/unicode
-  'r-base=3.3.2=0'
+  'r-base=3.3.2=1'
 - !!python/unicode
   'r-base64enc=0.1_3=r3.3.2_0'
 - !!python/unicode
@@ -418,11 +374,13 @@ dependencies:
 - !!python/unicode
   'r-zoo=1.7_13=r3.3.2_0'
 - !!python/unicode
+  'readline=6.2=2'
+- !!python/unicode
   'rpy2=2.8.5=py27r3.3.2_2'
 - !!python/unicode
   'scandir=1.5=py27_0'
 - !!python/unicode
-  'setuptools=27.2.0=py27_1'
+  'setuptools=27.2.0=py27_0'
 - !!python/unicode
   'simplegeneric=0.8.1=py27_1'
 - !!python/unicode
@@ -432,27 +390,31 @@ dependencies:
 - !!python/unicode
   'six=1.10.0=py27_0'
 - !!python/unicode
+  'sqlite=3.13.0=0'
+- !!python/unicode
   'ssl_match_hostname=3.4.0.2=py27_1'
 - !!python/unicode
   'subprocess32=3.2.7=py27_0'
 - !!python/unicode
+  'terminado=0.6=py27_0'
+- !!python/unicode
   'testpath=0.3=py27_0'
 - !!python/unicode
-  'tk=8.5.18=vc9_0'
+  'tk=8.5.18=0'
 - !!python/unicode
   'tornado=4.4.2=py27_0'
 - !!python/unicode
   'traitlets=4.3.2=py27_0'
 - !!python/unicode
-  'vs2008_runtime=9.00.30729.5054=0'
-- !!python/unicode
   'wcwidth=0.1.7=py27_0'
 - !!python/unicode
   'wheel=0.29.0=py27_0'
 - !!python/unicode
-  'win_unicode_console=0.5=py27_0'
+  'xz=5.2.2=1'
 - !!python/unicode
-  'zlib=1.2.8=vc9_3'
+  'zeromq=4.1.5=0'
+- !!python/unicode
+  'zlib=1.2.8=3'
 - pip:
   - backports-abc==0.5
   - backports.shutil-get-terminal-size==1.0.0
@@ -461,6 +423,5 @@ dependencies:
   - jupyter-client==5.0.0
   - jupyter-core==4.3.0
   - prompt-toolkit==1.0.9
-  - win-unicode-console==0.5
-prefix: /CHANGE-TO-YOUR/Anaconda2/envs/iterativeWGCNA
+prefix: !!python/unicode '/CHANGE-TO-YOURS/anaconda2/envs/iterativeWGCNA'
 
