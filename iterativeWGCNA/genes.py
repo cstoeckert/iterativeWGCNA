@@ -240,10 +240,10 @@ class Genes(object):
             summaryGenes = self.genes
         else:
             iterationGenes = self.__extract_iteration_genes(iteration)
-            summaryGenes = {gene:membership for gene, membership
-                            in self.genes.items()
-                            if gene in iterationGenes
-                            and membership['module'] != 'UNCLASSIFIED'}
+            summaryGenes = OrderedDict((gene, membership) for gene, membership
+                                       in self.genes.items()
+                                       if gene in iterationGenes
+                                       and membership['module'] != 'UNCLASSIFIED')
 
         with open(prefix + 'membership.txt', 'w') as f:
             print('\t'.join(('Gene', 'Module', 'kME')), file=f)
@@ -310,8 +310,8 @@ class Genes(object):
         membership = self.__extract_modules()
         if genes is not None:
             membership = {gene:module for gene, module in membership.items() if gene in genes}
-        classified = {gene:module for gene, module in membership.items()
-                      if module != 'UNCLASSIFIED'}
+        classified = [gene for gene, module in membership.items()
+                      if module != 'UNCLASSIFIED']
 
         return len(classified)
 
@@ -325,8 +325,8 @@ class Genes(object):
         '''
         membership = self.__extract_modules()
         if genes is not None:
-            membership = {gene:module for gene, module in membership.items()
-                          if gene in genes}
+            membership = OrderedDict((gene, module) for gene, module in membership.items()
+                                     if gene in genes)
         classifiedGenes = [gene for gene, module in membership.items()
                            if module != 'UNCLASSIFIED']
 
@@ -380,8 +380,8 @@ class Genes(object):
         membership = set(self.__extract_modules().values())
         membership.discard('UNCLASSIFIED')
         return list(membership)
-    
 
+    
     def get_module_members(self, targetModule):
         '''
         get list of module member genes
@@ -423,7 +423,7 @@ class Genes(object):
                 self.__update_classified_iteration(g, None)
 
 
-    def merge_close_modules(self, eigengenes, cutHeight, power=6):
+    def merge_close_modules(self, eigengenes, cutHeight)
         '''
         merge close modules based on similarity between
         eigengenes
