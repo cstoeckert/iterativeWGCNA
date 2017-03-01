@@ -71,7 +71,7 @@ class IterativeWGCNA(object):
         iterativeWGCNA output files
         exits to avoid accidental overwrite of earlier runs
         '''
-        conflictingFiles = set(('final-eigengenes.txt', 'final-membership.txt'))
+        conflictingFiles = set(('final-eigengenes.txt', 'final-membership.txt', 'eigengenes.txt'))
         files = set(os.listdir(self.args.workingDir))
         if len(files.intersection(conflictingFiles)) > 0:
             warning("Working Directory: " + self.args.workingDir \
