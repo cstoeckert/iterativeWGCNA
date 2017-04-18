@@ -14,10 +14,9 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
   
 ### Usage
   * [Running iterativeWGCNA](#running-iterativewgcna)
-  * [Summary Views](#summary-views)
+  * [Postprocessing Scripts](#postprocessing-scripts)
   
 ### [Troubleshooting](#troubleshooting-1)
-
 
 ## Setup and Installation
 
@@ -29,12 +28,20 @@ iterativeWGCNA has the following dependencies:
 
 [R](https://cran.r-project.org/) version 3.* must be available on the system and the binary executable in the system PATH.
 
-> NOTE: the most recent version of R that supports WGCNA is 3.2.0.
+> NOTE: the most recent version of R that supports WGCNA is 3.3.x
 
 iterativeWGCNA requires that the following R packages be installed:
 
 1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
+
+The post-processing scripts packaged with iterativeWGCNA have the following R package dependencies:
+
+1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
 1. [pheatmap](https://cran.r-project.org/web/packages/pheatmap/index.html): Pretty Heatmaps
+1. [igraph](http://igraph.org/r/): igraph
+1. [optparse](https://cran.r-project.org/web/packages/optparse/index.html): optparse command line parser
+1. [Bioconductor annotation packages](https://www.bioconductor.org/packages/release/BiocViews.html#___AnnotationData): GO.db, org.Mm.eg.db, org.Hs.eg.db
+1. [clusterProfiler](https://www.bioconductor.org/packages/release/bioc/html/clusterProfiler.html): statistical analysis and visualization of functional profiles for genes and gene clusters
 
 #### Python
 
@@ -58,7 +65,6 @@ python setup.py install
 ```
 
 > NOTE: depending on your system this may require administrative (e.g., sudo) permissions.
-
 
 As a work around, specify the `--user` switch to install iterativeWGCNA and its dependencies to a local (user) library (e.g., `.local/bin` on a Linux system) as follows:
 
@@ -124,8 +130,13 @@ python run_iterative_wgcna.py -h
 --enableWGCNAThreads
     enable WGCNA to use threads
     
---saveBlocks
-    save WGNCA blocks during each iteration
+--skipSaveBlocks
+    do not save WGCNA blockwise modules for each iteration
+	NOTE: blocks are necessary to generate summary graphics
+	
+-f, --finalMergeCutHeight <cut height>
+	cut height (max dissimilarity) for final module merge
+	(after algorithm convergence); [0, 1.0], default=0.05
     
 ```
 
@@ -144,7 +155,6 @@ sets the maximum block size to 5000 genes, the correlation type to the biweight 
 > WGCNA's `blockwiseModules` function partitions the gene set into a set of blocks each containing at most `maxBlockSize` genes.
 
 *To run iterativeWGCNA in a single block, set `maxBlockSize` to a value > than the number of genes in your geneset*.
-
 
 > NOTE: for large datasets (>10,000 genes or probes), adjacency and TOM matrix calculations done in a single block may fail due to memory allocation issues 
 
@@ -171,133 +181,69 @@ iterativeWGCNA expects a `tab-delimited` text file containing gene expression da
 | Gata1 | 500 | 715 | 1000 |
 | Phtf2 | 60 | 1000 | 1600 |
 
+> NOTE: We recommend using numeric gene identifiers to uniquely label genes in the input file as R will do some character substitutions (e.g., '.' for '-') and concatenate 'X' to gene symbols starting with a number, leading to erroneous mapping between data frames and potential loss of data.
+
 
 > iterativeWGCNA will accept `gzipped` input files.
 
 
 #### Output Files
 
-An iteration of iterativeWGCNA comprises one run of blockwiseWGCNA followed by an eigengene-connectivity (kME) goodness of fit assessment.  A pass of iterativeWGCNA comprises multiple iterations applied to an expression dataset until no more residuals to the kME-fit are found.  A new pass is initiated by creating a new expression dataset from all residuals to the kME-fit found during the previous pass.
+An **iteration** of iterativeWGCNA comprises one run of blockwiseWGCNA followed by an eigengene-connectivity (kME) goodness of fit assessment.  A **pass** of iterativeWGCNA comprises multiple iterations applied to an expression dataset until no more residuals to the kME-fit are found.  A new pass is initiated by creating a new expression dataset from all residuals to the kME-fit found during the previous pass.
 
-In the output files:
+> Modules are uniquely identified by the numerical assignment and the iteration in which they were first detected: e.g., `P1_I2_M1` is module 1, detected in the second iteration of the first pass.  **Unclassified genes are labeled UNCLASSIFIED with a kME of NA**.
 
-> Iterations are uniquely identfied as: `pN_iN` (passNumber_iterationNumber).
+Results from each pass and iteration are saved in a series of directories, labeled as:
 
----
+> passN: results from the numbered (N) pass
+> iN: results from the numbered (N) iteration
 
-> Modules are uniquely identified by the numerical assignment and the iteration in which they were first detected: e.g., `p1_i2-1` is module '1' detected in the second iteration of the first pass.
+The directory structure and output files are as follows:
 
-* `iterativeWGCNA.log`: main log file for the iterativeWGCNA run
-* `iterativeWGCNA-R.log`: log file for R; catches R errors and R warning messages
-
-* `gene-counts.txt`: tally of number of genes fit and residual to the fit with each iteration
-
-* `eigengenes.txt`: eigengenes for all modules detected during each iteration
-* `eigengenes-final.txt`: eigengenes for final modules after final network assembly and merging of close modules
-* `eigengene-overview.pdf`: eigengene network block model and eigengene heatmap
-
-* `membership.txt`: gene-module assignments after each iteration; last column lists the `final` membership assignments
-* `pre-pruning-membership.txt`: gene-module assignments before pruning based on eigengene connectivity (kME)
-
-* `eigengene-connectivity.txt`: eigengene connectivity (kME) of each gene to its assigned module; last column lists the `final` kME
-* `pre-pruning-eigengene-connectivity.txt`: kME of each gene to its assigned module before pruning
-
-* `input-block-diagram.pdf`: block diagram of a network based on hierarchical clustering of the correlation-based adjacency matrix for all input genes, with classified genes highlighted 
-* `network-block-diagram.pdf`: block diagram and clustering of classified gene network
-
-* `module-summary.txt`: list of modules and per-module network properties providing insight into the robustness of the classification and the network modularity.  These include:
-  * size: number of assigned genes
-  * color: color assigned to module in graphical output
-  * kOut: number of inter-modular connections
-  * avg_node_kOut: average # of connections outside the module, assuming all genes are equally connected
-  * kIn: number of intra-modular connections (/2 assuming a->b = b<-a)
-  * module_density: observed number of intra-modular connections / expected number of intra-modular connections
-  * kIn2kOut_ration: ratio of intra- to inter-modular connections
-
-* `blocks-p*_i*.RData`: if `--saveBlocks` switch was specified, one .RData file per iteration containing the block data structure generated by the run of the WGCNA `blockwiseModules` function
-
-
-### Summary Views
-
-1. [Quick Start](#quick-start-1)
-1. [Command Line Options](#command-line-options-1)
-1. [Output Files](#output-files-1)
-
-#### Quick Start
-
-Once iterativeWGCNA is completed, additional summary views of the classification can be generated from the output, including per-module data summaries and visualizations.  This is accomplished with the wrapper script `run_network_summary.py`.  At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.  
-
-```sh
-python run_network_summary.py -i <input_file_path> 
+```
+├── output_directory
+│   ├── `iterativeWGCNA.log`: main log file for the iterativeWGCNA run
+│   ├── `iterativeWGCNA-R.log`: log file for R; catches R errors and R warning messages
+│   ├── `gene-counts.txt`: tally of number of genes fit and residual to the fit with each iteration
+│   ├── `final-eigengenes.txt`: eigengenes for final modules after final network assembly and merging of close modules
+│   ├── `final-kme-histogram.pdf`: histogram of eigengene connectivities (kME) in the final classification
+│   ├── `final-membership.txt`: gene-module assignments and kME after final iteration and merge
+│   ├── passN
+│   │   ├── `initial-pass-expression-set.txt`: pass input
+│   │   ├── `kme_histogram.pdf`: histogram of eigengene connectivities for genes classified during pass
+│   │   ├── `membership.txt`: gene-module assignments and kME for genes classfied during pass
+│   │   ├── iN
+│   │   │   ├── `eigengenes.txt`: eigengenes of modules detected during the iteration
+│   │   │   ├── `kme_histogram.pdf`: kME histogram after pruning of WGCNA result based on kME
+│   │   │   ├── `membership.txt`: gene membership after kME-based goodness of fit (Pruning)
+|   │   │   ├── `summary.txt`: summaries pass (number genes input, classfied, residual, and number of detected modules)
+│   │   |   ├── `wgcna-blocks.RData`: R data object containing input expression data (expression) and results from blockwise WGCNA (blocks)
+│   │   │   ├── `wgcna-kme_histogram.pdf`: kME histogram based on WGCNA classification
+│   │   │   ├── `wgcna-membership.txt`: gene membership from WGCNA classification
 ```
 
-#### Command Line Options
+### Postprocessing Scripts
 
-Execute `run_network_summary.py` with the `-h` (`--help`) switch to see all command line options and additional usage information.
+There are several post-processing scripts provided in the the `scripts` directory that allow further exploration of the iterativeWGCNA results.  
+
+> For script usage run with the --help option or read documentation in header comments
+
+* `extract_network_expression.py`: takes the expression input file and the final-membership.txt file from iterativeWGCNA and extracts module members.  Can also be used to add membership and kME values to expression data (see usage)
+* `add_annotation2expression.py`: adds additional annotation to an expression data file
+* `plot_eigengene_network.R`: plots eigengene network (using WGCNA plotEigengeneNetwork function) to a pdf file **requires WGCNA**
+* `spinglass_community_detection.R`: uses a spinglass community detection algorithm to detect a meta-network using module eigengenes **requires igraph**
+* `plot_metanetwork_heatmap.R`: assumes a 2-d classification (network modules and meta-network meta-modules) and plots an ordered heatmap; does not cluster samples by default  **requires pheatmap** 
+* `enrichment_analysis.R`: perform GO and pathway enrichment analysis **requires Bioconductor packages: GO.db, org.Mm.eg.db, org.Hs.eg.db, clusterProfiler**
+
+Example usage:
 
 ```sh
-python run_network_summary.py -h
+python extract_network_expression.py --help
 ```
 
-```diff
--h, --help
-    show help message and exit
-    
--i <gene expression file>, --inputFile <gene expression file>
-    full path to input gene expression file; if full path is not provided,
-    assumes the file is in the working (output) directory
-+ required
-
--o <output dir>, --workingDir <output dir>
-    R working directory; where output will be saved
-    
--v, --verbose
-   print status messages
-
--p <power law beta>, --power <power law beta>
-    power law beta for weighting the adjacency matrix
-    default = 6
-    
---signed
-   generate signed adjacency matrix?
-   
---minKMEtoStay <minKMEtoStay>
-   provide minKMEtoStay used for network generation
-   default = 0.8
-
---enableWGCNAThreads
-   enable WGCNA to use threads
-   
---generateNetworkSummary <view type>
-    generate summary overview of the network (dendrogram & heatmap):
-       network - network comprised only of classified genes
-       input - all genes, with classified highlighted by module assignments
-       all - both views
-+ NOTE: all adjacency matrix calculations are done in one block and may fail due to memory allocation issues for large gene-sets
-
--s <module name>, --summarizeModule <module name>
-    generate summary info for specified module
-
--e <min edge weight>, --edgeWeight <min edge weight>
-    min edge weight for network summary; filters for connections supported by a correlation >= edgeWeight
-```			
-
-#### Output Files
-
-Summary view output files include one or more of the following:
-
-> with the switch `--generateNetworkSummary` and option `network` or `all`:
-
-* `network-block-diagram.pdf`: block diagram and clustering of classified gene network, filtered for connections >= `edgeWeight`
-
-> with the switch `--generateNetworkSummary` and option `input` or `all`
-
-* `input-block-diagram.pdf`: block diagram of a network based on hierarchical clustering of the correlation-based adjacency matrix for all input genes, with classified genes highlighted, filtered for connections >= `edgeWeight`
-
-> with the switch `--sumarizeModule <module name>`:
-
-* `<module name>`-summary.pdf: pdf containing eigengene plot, eigengene connectivity histogram and expression heatmap for the module
-
+```sh
+Rscript spinglass_community_detection.R --help
+```
 
 ## Troubleshooting
 

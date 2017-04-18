@@ -13,7 +13,8 @@ and expression values
 from __future__ import print_function
 
 import argparse
-from sys import stdout
+from sys import stdout, stderr, exit
+from collections import OrderedDict
 
 def parse_id2gene_map():
     '''
@@ -35,13 +36,13 @@ def parse_membership():
     returns a dict of gene identifiers to module
     membership assignments
     '''
-    membership = {}
+
     with open(args.classification, 'r') as f:
         f.next() # skip header
         for line in f:
             values = line.strip().split('\t')
-            membership[values[0]] = values[1]
-
+            membership.update({values[0]: values[1]})
+            kme.update({values[0]: values[2]})
 
 def extract_expression():
     '''
@@ -50,29 +51,45 @@ def extract_expression():
     '''
     with open(args.expression, 'r') as f:
         fields = f.next().strip().split('\t')
+
+        if args.addKmeColumn:
+            fields.insert(1, 'kME')
         if args.addMembershipColumn:
             fields.insert(1, 'Module')
-        print('\t'.join(header), file=stdout)
+
+        print('\t'.join(fields), file=stdout)
 
         for line in f:
             expression = line.strip().split('\t')
-            geneId = expression.pop()
-            geneMembership = membership[gene]
+            geneId = expression.pop(0)
+            geneMembership = membership[geneId]
+            geneKme = kme[geneId]
             
             if geneMembership == 'UNCLASSIFIED' \
                 and args.includeUnclassified is None:
                 continue
-            
+
             if (args.module is not None \
-              and geneMembership == args.module) \
-              or args.module is None:
+                and geneMembership == args.module) \
+                or args.module is None:
 
-              # map id
-              if args.addMembershipColumn:
-                expression.insert(0, geneMembership)
+                if args.addKmeColumn:
+                    expression.insert(0, geneKme)
+                if args.addMembershipColumn:
+                    expression.insert(0, geneMembership)
+       
+                gene = geneId
+                if len(geneIdMap) > 0:
+                    try:
+                        gene = geneIdMap[geneId]
+                    except KeyError:
+                        exit("ERROR: Gene " + geneId
+                             + " not in gene mapping file "
+                             + args.geneIdMapping)
 
-                print('\t'.join(
-              
+                expression.insert(0, gene)
+
+                print('\t'.join(expression), file=stdout)
 
 
 if __name__ == '__main__':
@@ -114,16 +131,27 @@ if __name__ == '__main__':
                         help="add column to extracted expression listing\n"
                         + "module membership",
                         action='store_true')
-    
+
+    parser.add_argument('--addKmeColumn',
+                        help="add column to extracted expression listing\n"
+                        + "gene kME",
+                        action='store_true')
+
     parser.add_argument('--includeUnclassified',
                         help="include unclassified genes?",
                         action='store_true')
 
-    args = parser.parser_args()
+    args = parser.parse_args()
 
-    geneIdMap = parse_id2gene_map()
-    membership = parse_membership()
-    extract_expression()
-    
+    geneIdMap = OrderedDict() # for sanity checks
+    membership = OrderedDict()
+    kme = {}
 
-    
+    try:
+        parse_id2gene_map()
+        parse_membership()
+        extract_expression()
+    except IOError as e:
+        exit("I/O error({0}): {1}".format(e.errno, e.strerror))
+
+

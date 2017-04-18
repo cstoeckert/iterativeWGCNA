@@ -148,7 +148,7 @@ def parse_command_line_args():
                         action='store_true')
 
     parser.add_argument('--skipSaveBlocks',
-                        help="do not save WGNCA blockwise modules for each iteration;\n"
+                        help="do not save WGCNA blockwise modules for each iteration;\n"
                         + "NOTE: without blocks summary graphics cannot be generated.",
                         action='store_true')
 

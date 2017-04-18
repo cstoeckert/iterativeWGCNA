@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-## plots eigengene network to a PDF file
+## plots eigengene network to a PDF file using WGCNA
 ## use alterative grDevice to generate other file types (see https://stat.ethz.ch/R-manual/R-devel/library/grDevices/html/png.html)
 
 ## please view the documentation for the plotEigengeneNetwork
@@ -11,8 +11,7 @@ require(WGCNA)
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
     print("Please provide full path to eigengene file name")
-    print("USAGE: eigengene_network_wgcna.R <file>")
-    stopifnot(FALSE)
+    stop("USAGE: eigengene_network_wgcna.R <file>")
 }
 
 eigengeneFile <- args[1]

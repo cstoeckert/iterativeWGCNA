@@ -1,20 +1,15 @@
 
-*.py#
 
-.#iWGCNA.py
+.#README.md
 
-rSnippets.pyc
+.markdown-preview.html
 
-*.bak
+*.md#
 
 *.pyc
 
-flycheck_iWGCNA.py
+iterativeWGCNA/.Rhistory
 
-.Rhistory
-.#rSnippets.py
-*.py~
-*.org
-todo.org~
+*.R#
 
-iterativeWGCNA/.#wgcna.py
+scripts/operations.R
