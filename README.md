@@ -194,24 +194,24 @@ The directory structure and output files are as follows:
 
 ```
 ├── output_directory
-│   ├── `iterativeWGCNA.log`: main log file for the iterativeWGCNA run
-│   ├── `iterativeWGCNA-R.log`: log file for R; catches R errors and R warning messages
-│   ├── `gene-counts.txt`: tally of number of genes fit and residual to the fit with each iteration
-│   ├── `final-eigengenes.txt`: eigengenes for final modules after final network assembly and merging of close modules
-│   ├── `final-kme-histogram.pdf`: histogram of eigengene connectivities (kME) in the final classification
-│   ├── `final-membership.txt`: gene-module assignments and kME after final iteration and merge
+│   ├── <b>iterativeWGCNA.log</b>: main log file for the iterativeWGCNA run
+│   ├── iterativeWGCNA-R.log: log file for R; catches R errors and R warning messages
+│   ├── gene-counts.txt: tally of number of genes fit and residual to the fit with each iteration
+│   ├── final-eigengenes.txt: eigengenes for final modules after final network assembly and merging of close modules
+│   ├── final-kme-histogram.pdf: histogram of eigengene connectivities (kME) in the final classification
+│   ├── final-membership.txt: gene-module assignments and kME after final iteration and merge
 │   ├── passN
-│   │   ├── `initial-pass-expression-set.txt`: pass input
-│   │   ├── `kme_histogram.pdf`: histogram of eigengene connectivities for genes classified during pass
-│   │   ├── `membership.txt`: gene-module assignments and kME for genes classfied during pass
+│   │   ├── initial-pass-expression-set.txt: pass input
+│   │   ├── kme_histogram.pdf: histogram of eigengene connectivities for genes classified during pass
+│   │   ├── membership.txt: gene-module assignments and kME for genes classfied during pass
 │   │   ├── iN
-│   │   │   ├── `eigengenes.txt`: eigengenes of modules detected during the iteration
-│   │   │   ├── `kme_histogram.pdf`: kME histogram after pruning of WGCNA result based on kME
-│   │   │   ├── `membership.txt`: gene membership after kME-based goodness of fit (Pruning)
-|   │   │   ├── `summary.txt`: summaries pass (number genes input, classfied, residual, and number of detected modules)
-│   │   |   ├── `wgcna-blocks.RData`: R data object containing input expression data (expression) and results from blockwise WGCNA (blocks)
-│   │   │   ├── `wgcna-kme_histogram.pdf`: kME histogram based on WGCNA classification
-│   │   │   ├── `wgcna-membership.txt`: gene membership from WGCNA classification
+│   │   │   ├── eigengenes.txt: eigengenes of modules detected during the iteration
+│   │   │   ├── kme_histogram.pdf: kME histogram after pruning of WGCNA result based on kME
+│   │   │   ├── membership.txt: gene membership after kME-based goodness of fit (Pruning)
+|   │   │   ├── summary.txt: summaries pass (number genes input, classfied, residual, and number of detected modules)
+│   │   |   ├── wgcna-blocks.RData: R data object containing input expression data (expression) and results from blockwise WGCNA (blocks)
+│   │   │   ├── wgcna-kme_histogram.pdf: kME histogram based on WGCNA classification
+│   │   │   ├── wgcna-membership.txt: gene membership from WGCNA classification
 ```
 
 ## Troubleshooting
