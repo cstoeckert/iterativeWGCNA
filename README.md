@@ -16,9 +16,9 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 
 * [Running iterativeWGCNA](#running-iterativewgcna)
   
-### [Troubleshooting]
+### Troubleshooting
 
-* [libreadline.so.6: undefined symbol](#libreadline.so.6-undefined-symbol)
+* [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
 
 ## Setup and Installation
 
