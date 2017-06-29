@@ -194,7 +194,7 @@ The directory structure and output files are as follows:
 
 ```
 ├── output_directory
-│   ├── <b>iterativeWGCNA.log</b>: main log file for the iterativeWGCNA run
+│   ├── iterativeWGCNA.log: main log file for the iterativeWGCNA run
 │   ├── iterativeWGCNA-R.log: log file for R; catches R errors and R warning messages
 │   ├── gene-counts.txt: tally of number of genes fit and residual to the fit with each iteration
 │   ├── final-eigengenes.txt: eigengenes for final modules after final network assembly and merging of close modules
