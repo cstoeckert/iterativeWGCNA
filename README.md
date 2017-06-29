@@ -13,10 +13,12 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 * [Installation](#installation)
   
 ### Usage
-  * [Running iterativeWGCNA](#running-iterativewgcna)
-  * [Postprocessing Scripts](#postprocessing-scripts)
+
+* [Running iterativeWGCNA](#running-iterativewgcna)
   
-### [Troubleshooting](#troubleshooting-1)
+### [Troubleshooting]
+
+* [libreadline.so.6: undefined symbol](#libreadline.so.6-undefined-symbol)
 
 ## Setup and Installation
 
@@ -34,21 +36,11 @@ iterativeWGCNA requires that the following R packages be installed:
 
 1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
 
-The post-processing scripts packaged with iterativeWGCNA have the following R package dependencies:
-
-1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
-1. [pheatmap](https://cran.r-project.org/web/packages/pheatmap/index.html): Pretty Heatmaps
-1. [igraph](http://igraph.org/r/): igraph
-1. [optparse](https://cran.r-project.org/web/packages/optparse/index.html): optparse command line parser
-1. [Bioconductor annotation packages](https://www.bioconductor.org/packages/release/BiocViews.html#___AnnotationData): GO.db, org.Mm.eg.db, org.Hs.eg.db
-1. [clusterProfiler](https://www.bioconductor.org/packages/release/bioc/html/clusterProfiler.html): statistical analysis and visualization of functional profiles for genes and gene clusters
-
 #### Python
 
 iterativeWGCNA requires Python version 2.7 or higher.  It is designed to be future compatible with Python 3+.  iterativeWGCNA requires the following Python packages:
 
 1. [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
-1. [matplotlib](http://matplotlib.org/): a python 2D plotting library
 
 If missing, these will be installed by the iterativeWGCNA installer.  See below.
 
@@ -222,46 +214,25 @@ The directory structure and output files are as follows:
 │   │   │   ├── `wgcna-membership.txt`: gene membership from WGCNA classification
 ```
 
-### Postprocessing Scripts
-
-There are several post-processing scripts provided in the the `scripts` directory that allow further exploration of the iterativeWGCNA results.  
-
-> For script usage run with the --help option or read documentation in header comments
-
-* `extract_network_expression.py`: takes the expression input file and the final-membership.txt file from iterativeWGCNA and extracts module members.  Can also be used to add membership and kME values to expression data (see usage)
-* `add_annotation2expression.py`: adds additional annotation to an expression data file
-* `plot_eigengene_network.R`: plots eigengene network (using WGCNA plotEigengeneNetwork function) to a pdf file **requires WGCNA**
-* `spinglass_community_detection.R`: uses a spinglass community detection algorithm to detect a meta-network using module eigengenes **requires igraph**
-* `plot_metanetwork_heatmap.R`: assumes a 2-d classification (network modules and meta-network meta-modules) and plots an ordered heatmap; does not cluster samples by default  **requires pheatmap** 
-* `enrichment_analysis.R`: perform GO and pathway enrichment analysis **requires Bioconductor packages: GO.db, org.Mm.eg.db, org.Hs.eg.db, clusterProfiler**
-
-Example usage:
-
-```sh
-python extract_network_expression.py --help
-```
-
-```sh
-Rscript spinglass_community_detection.R --help
-```
-
 ## Troubleshooting
 
-Access to the `readline` library in the context of the `rpy2` library can be problematic and has been [reported elsewhere](https://github.com/ContinuumIO/anaconda-issues/issues/152). In trying to run iterativeWGCNA, an error like the following would be observed:
+### libreadline.so.6 undefined symbol
+
+Access to the `readline` library in the context of the `rpy2` library and an Ananconda install can be problematic and has been [reported elsewhere](https://github.com/ContinuumIO/anaconda-issues/issues/152). In trying to run iterativeWGCNA, an error like the following would be observed:
 ```
 Traceback (most recent call last):
-  File "/home/_USER_/iterativeWGCNA-master/run_iterative_wgcna.py", line 7, in <module>
+  File "../iterativeWGCNA-master/run_iterative_wgcna.py", line 7, in <module>
     from iterativeWGCNA.iterativeWGCNA import IterativeWGCNA
-  File "/home/_USER_/iterativeWGCNA-master/iterativeWGCNA/iterativeWGCNA.py", line 17, in <module>
+  File "../iterativeWGCNA-master/iterativeWGCNA/iterativeWGCNA.py", line 17, in <module>
     import rpy2.robjects as ro
-  File "/home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/robjects/__init__.py", line 15, in <module>
+  File "../lib/python2.7/site-packages/rpy2/robjects/__init__.py", line 15, in <module>
     import rpy2.rinterface as rinterface
-  File "/home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/rinterface/__init__.py", line 100, in <module>
+  File "../lib/python2.7/site-packages/rpy2/rinterface/__init__.py", line 100, in <module>
     from rpy2.rinterface._rinterface import *
-ImportError: /home/_USER_/bin/anaconda2/lib/python2.7/site-packages/rpy2/rinterface/../../../../libreadline.so.6: undefined symbol: PC
+ImportError: ../lib/python2.7/site-packages/rpy2/rinterface/../../../../libreadline.so.6: undefined symbol: PC
 ```
 
-The workaround is to uncomment the following line in `run_iterative_wgcna.py`:
+The workaround is to uncomment the readline import in the `run_iterative_wgcna.py` script:
 
 ```python
 # import readline
