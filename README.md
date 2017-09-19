@@ -46,7 +46,7 @@ If missing, rpy2 will be installed by the iterativeWGCNA installer.  See below.
 
 ### Installation
 
-iterativeWGCNA can be run without installing the package as long as the requisite Python dependencies (rpy2 and matplotlib) are already present on the system.  Installing the package will install any missing *Python* dependencies.
+iterativeWGCNA can be run without installing the package as long as the requisite Python dependencies (rpy2) and R are already present on the system.  Installing the package will install any missing *Python* dependencies.
 
 To install the iterativeWGCNA package run the following command:
 
