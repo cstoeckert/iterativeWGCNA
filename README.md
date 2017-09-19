@@ -34,19 +34,19 @@ iterativeWGCNA has the following dependencies:
 
 iterativeWGCNA requires that the following R packages be installed:
 
-1. [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
+* [WGCNA](https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/#cranInstall): Weighted Gene Co-expression Network Analysis package and Bioconductor dependencies
 
 #### Python
 
 iterativeWGCNA requires Python version 2.7 or higher.  It is designed to be future compatible with Python 3+.  iterativeWGCNA requires the following Python packages:
 
-1. [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
+* [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
 
-If missing, these will be installed by the iterativeWGCNA installer.  See below.
+If missing, rpy2 will be installed by the iterativeWGCNA installer.  See below.
 
 ### Installation
 
-iterativeWGCNA can be run without installing the package as long as the requisite Python dependencies (rpy2 and matplotlib) are already present on the system.  Installing the package will install any missing *Python* dependencies.
+iterativeWGCNA can be run without installing the package as long as the requisite Python dependencies (rpy2) and R are already present on the system.  Installing the package will install any missing *Python* dependencies.
 
 To install the iterativeWGCNA package run the following command:
 
