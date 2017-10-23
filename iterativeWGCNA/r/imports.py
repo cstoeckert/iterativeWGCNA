@@ -2,6 +2,7 @@
 imports from R; wrapped in functions
 to ensure warning messages go to the R log
 '''
+
 from rpy2.robjects.packages import importr, SignatureTranslatedAnonymousPackage
 from .snippets import FUNCTIONS
 
@@ -29,3 +30,17 @@ def grdevices():
 
 def pheatmap():
     return importr('pheatmap')
+
+
+def circlize():
+    return importr('circlize')
+
+
+def reshape2():
+    return importr('reshape2')
+
+
+def colorRamps():
+    return importr('colorRamps')
+
+
