@@ -253,7 +253,7 @@ export CC=clang
 
 #### clang: error: unsupported option '-fopenmp'
 
-This is a known issue with an open ticket in the rpy2 project (see issue [#403](https://bitbucket.org/rpy2/rpy2/issues/403/cannot-pip-install-rpy2-with-latest-r-340)).  R 3.4.0 was built using the ```-fopenmp``` flag with Clang 4.0.0, which is not supplied by Apple.  There are several suggested workarounds (e.g., installing the LLVM library via homebrew) that do not work for all system configurations.  We recommend [downloading the rpy2 source](https://bitbucket.org/rpy2/rpy2/src), unpacking, and editing the ```setup.py``` file after line 268 (the line above the comment ```# OS X's frameworks need special attention```) as follows:
+This is a known issue with an open ticket in the rpy2 project (see issue [#403](https://bitbucket.org/rpy2/rpy2/issues/403/cannot-pip-install-rpy2-with-latest-r-340)).  R 3.4.0 was built using the ```-fopenmp``` flag with Clang 4.0.0, which is not supplied by Apple.  There are several suggested workarounds (e.g., installing the LLVM library via homebrew) that do not work for all system configurations.  We recommend [downloading the rpy2 source](https://bitbucket.org/rpy2/rpy2/src), unpacking, and editing the ```setup.py``` file after line 268 (the line directly above the comment ```# OS X's frameworks need special attention```) as follows:
 
 ```python
   if "-fopenmp" in unknown:  # remove linker argument
