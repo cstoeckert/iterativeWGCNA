@@ -19,6 +19,7 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 ### Troubleshooting
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
+* [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
 
 ## Setup and Installation
 
@@ -252,16 +253,18 @@ export CC=clang
 
 #### clang: error: unsupported option '-fopenmp'
 
-This is a known issue currently with an open ticket in the rpy2 project (see issue [#403](https://bitbucket.org/rpy2/rpy2/issues/403/cannot-pip-install-rpy2-with-latest-r-340).  R 3.4.0 was built using the '-fopenmp' flag with Clang 4.0.0, which is not supplied by Apple.  There are several workarounds suggested for installing the LLVM library via homebrew that do not always work.  We recommend downloading the rpy2 [source](https://bitbucket.org/rpy2/rpy2/src) and editing the ```setup.py``` file after line 268 and before the comment ```# OS X's frameworks need special attention``` as follows:
+This is a known issue with an open ticket in the rpy2 project (see issue [#403](https://bitbucket.org/rpy2/rpy2/issues/403/cannot-pip-install-rpy2-with-latest-r-340)).  R 3.4.0 was built using the ```-fopenmp``` flag with Clang 4.0.0, which is not supplied by Apple.  There are several suggested workarounds (e.g., installing the LLVM library via homebrew) that do not work for all system configurations.  We recommend [downloading the rpy2 source](https://bitbucket.org/rpy2/rpy2/src), unpacking, and editing the ```setup.py``` file after line 268 (the line above the comment ```# OS X's frameworks need special attention```) as follows:
 
 ```python
   if "-fopenmp" in unknown:  # remove linker argument
         unknown.remove("-fopenmp")
 ```
 
-You should be able to then build ryp2 by running
+With this fix you should be able to build rpy2 from the downloaded source as follows:
 
-```python setup.py install```
+```bash 
+python setup.py install
+```
 
 
 
