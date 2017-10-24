@@ -62,13 +62,17 @@ def write_data_frame(df, fileName, rowLabel):
         df.to_csvfile(fileName, quote=False, sep='\t', col_names=False, append=True)
 
         
-def read_data(fileName):
+def read_data(fileName, toReal=True):
     '''
     read gene expression data into a data frame
     and convert numeric (integer) data to real
     '''
     data = ro.DataFrame.from_csvfile(fileName, sep='\t', header=True, row_names=1)
-    return rsnippets.numeric2real(data)
+    if toReal:
+        return rsnippets.numeric2real(data)
+    else:
+        return data
+    
 
 
 def transpose_file_contents(fileName, rowLabel):
