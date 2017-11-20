@@ -193,6 +193,77 @@ def set_wgcna_parameter_defaults(params):
     return params
 
 
+def parse_summary_command_line_args():
+    '''
+    parse command line args for summary
+    '''
+
+    parser = argparse.ArgumentParser(prog='iterativeWGCNA network summary',
+                                     description="generate graphical results from interative WGCNA analysis",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-i', '--inputFile',
+                        metavar='<gene expression file>',
+                        help="full path to input gene expression file; "
+                        + "if full path is not provided,\n"
+                        + "assumes the file is in the working directory\n;"
+                        + "see below for input file format",
+                        required=True)
+
+    parser.add_argument('-o', '--workingDir',
+                        help="R working directory; where output will be saved",
+                        metavar='<output dir>',
+                        default=getcwd())
+
+    parser.add_argument('-v', '--verbose',
+                        help="print status messages",
+                        action='store_true')
+
+    parser.add_argument('-p', '--power',
+                        metavar='<power law beta>',
+                        help="power law beta for weighting the adjacency matrix",
+                        default=6,
+                        type=int)
+
+    parser.add_argument('--signed',
+                        help="generate signed adjacency matrix?",
+                        action='store_true')
+
+    parser.add_argument('--minKMEtoStay',
+                        help="provide minKMEtoStay used for network generation",
+                        default=0.80,
+                        metavar='<minKMEtoStay>',
+                        type=restricted_float)
+
+    parser.add_argument('--enableWGCNAThreads',
+                        help="enable WGCNA to use threading;\nsee WGCNA manual",
+                        action='store_true')
+
+    parser.add_argument('--generateNetworkSummary',
+                        metavar='<view type>',
+                        choices=['all', 'network', 'input'],
+                        help="generate summary overview of the network (dendrogram & heatmap):\n"
+                        + "network - network comprised only of classified genes\n"
+                        + "input - all genes, with classified highlighted by module assignments\n"
+                        + "all - both views\n"
+                        + "NOTE: all adjacency matrix calculations are\n"
+                        + "done in one block and may fail due to memory allocation\n"
+                        + "issues for large gene-sets")
+
+    parser.add_argument('-e', '--edgeWeight',
+                        metavar='<min edge weight>',
+                        default=0.5,
+                        help="min edge weight for network summary; filters for\n"
+                        + "connections supported by a correlation >= threshold",
+                        type=restricted_float)
+
+    parser.add_argument('-preMerge',
+                        action='store_true',
+                        help="use membership from final iteration (before merging)")
+
+    return parser.parse_args()
+
+
 
 def parse_adjust_merge_command_line_args():
     '''
