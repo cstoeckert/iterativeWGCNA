@@ -19,6 +19,7 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 ### Troubleshooting
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
+* [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
 
 ## Setup and Installation
 
@@ -41,6 +42,8 @@ iterativeWGCNA requires that the following R packages be installed:
 iterativeWGCNA requires Python version 2.7 or higher.  It is designed to be future compatible with Python 3+.  iterativeWGCNA requires the following Python packages:
 
 * [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
+
+> NOTE: the most recent version of rpy2 requires python 3.x
 
 If missing, rpy2 will be installed by the iterativeWGCNA installer.  See below.
 
@@ -237,3 +240,32 @@ The workaround is to uncomment the readline import in the `run_iterative_wgcna.p
 ```python
 # import readline
 ```
+
+### Cannot install rpy2 with latest R (version 3.4.x) on macOS
+
+#### error: command 'gcc' failed with exit status 1
+
+The build process for many R libraries explicitly uses ```gcc```, instead of the system default, which on OSX is ```clang```.  To override the default compiler, set the CC environmental variable as folows:
+
+```bash
+export CC=clang
+```
+
+#### clang: error: unsupported option '-fopenmp'
+
+This is a known issue with an open ticket in the rpy2 project (see issue [#403](https://bitbucket.org/rpy2/rpy2/issues/403/cannot-pip-install-rpy2-with-latest-r-340)).  R 3.4.0 was built using the ```-fopenmp``` flag with Clang 4.0.0, which is not supplied by Apple.  There are several suggested workarounds (e.g., installing the LLVM library via homebrew) that do not work for all system configurations.  We recommend [downloading the rpy2 source](https://bitbucket.org/rpy2/rpy2/src), unpacking, and editing the ```setup.py``` file after line 268 (the line above the comment ```# OS X's frameworks need special attention```) as follows:
+
+```python
+  if "-fopenmp" in unknown:  # remove linker argument
+        unknown.remove("-fopenmp")
+```
+
+With this fix you should be able to build rpy2 from the downloaded source as follows:
+
+```bash 
+python setup.py install
+```
+
+
+
+
