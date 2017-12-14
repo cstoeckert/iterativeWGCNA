@@ -83,7 +83,13 @@ python setup.py install --user
 
 #### Quick Start
 
-iterativeWGCNA can be run without installing the iterativeWGCNA package by excuting the wrapper script `run_iterative_wgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified.
+If installed via the `pip` or `easy_install`, iterativeWGCNA can be run using the `iterativeWGCNA` command.  At minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified:
+
+```sh
+iterativeWGCNA -i <input_file_path>
+```
+
+iterativeWGCNA can also be run without installing the iterativeWGCNA package by executing the wrapper script `run_iterative_wgcna.py` in the iterativeWGCNA directory. At a minimum, the `-i` option (`--inputFile`) denoting the full path to the input file must be specified:
 
 ```sh
 python run_iterative_wgcna.py -i <input_file_path> 
