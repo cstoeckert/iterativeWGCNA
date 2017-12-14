@@ -6,6 +6,7 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 
 ## Contents
 
+### Citation
 
 ### Setup and Installation
 
@@ -20,6 +21,12 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
 * [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
+
+## Citation
+
+[Greenfest-Allen et. al 2017.](https://doi.org/10.1101/234062): "iterativeWGCNA: iterative refinement to improve module detection from WGCNA co-expression networks"
+
+
 
 ## Setup and Installation
 
