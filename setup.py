@@ -1,15 +1,17 @@
 from setuptools import setup
 
 setup(name='iterativeWGCNA',
-      version='0.1',
+      version='1.1.1',
       description="Iterative application of WGCNA",
       long_description='''Iterative application of
-      Weighted Gene Coexpression Network Analysis (WGCNA)
+      Weighted Gene Correlation Network Analysis (WGCNA)
       to improve whole-transcriptome gene classification''',
       url='http://github.com/cstoeckert/iterativeWGCNA',
+      download_url='https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.1.tar.gz',
       author='Emily Greenfest-Allen',
-      author_email='allenem@upenn.edu',
+      author_email='allenem@pennmedicine.upenn.edu',
       license='GNU',
       packages=['iterativeWGCNA'],
-      install_requires=['rpy2','matplotlib'],
+      install_requires=['rpy2'],
+      keywords=['network', 'WGCNA', 'gene expression', 'bioinformatics'],
       zip_safe=False)
