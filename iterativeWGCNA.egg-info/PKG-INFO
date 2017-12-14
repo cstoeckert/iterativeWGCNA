@@ -1,0 +1,15 @@
+Metadata-Version: 1.1
+Name: iterativeWGCNA
+Version: 1.1.2
+Summary: Iterative application of WGCNA
+Home-page: http://github.com/cstoeckert/iterativeWGCNA
+Author: Emily Greenfest-Allen
+Author-email: allenem@pennmedicine.upenn.edu
+License: GNU
+Download-URL: https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.2.tar.gz
+Description-Content-Type: UNKNOWN
+Description: Iterative application of
+              Weighted Gene Correlation Network Analysis (WGCNA)
+              to improve whole-transcriptome gene classification
+Keywords: network,WGCNA,gene expression,bioinformatics
+Platform: UNKNOWN
