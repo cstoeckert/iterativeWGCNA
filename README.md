@@ -8,7 +8,7 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 
 When citing iterativeWGCNA, please use:
 
-Greenfest-Allen et. al 2017. iterativeWGCNA: iterative refinement to improve module detection from WGCNA co-expression networks. bioRxiv [doi:10.1101/234062](https://doi.org/10.1101/234062)
+Greenfest-Allen et. al 2017. iterativeWGCNA: iterative refinement to improve module detection from WGCNA co-expression networks. [bioRxiv doi:10.1101/234062](https://doi.org/10.1101/234062)
 
 
 ## Contents
