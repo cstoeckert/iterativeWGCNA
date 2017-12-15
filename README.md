@@ -4,8 +4,14 @@
 
 iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted Gene Correlation Network Analysis](https://github.com/cran/WGCNA) (WGCNA) that improves the robustness of network-based classifications (modules) inferred from whole-transcriptome gene expression datasets.
 
-## Contents
+## How to Cite
 
+When citing iterativeWGCNA, please use:
+
+Greenfest-Allen et. al 2017. iterativeWGCNA: iterative refinement to improve module detection from WGCNA co-expression networks. [bioRxiv doi:10.1101/234062](https://doi.org/10.1101/234062)
+
+
+## Contents
 
 ### Setup and Installation
 
@@ -20,6 +26,7 @@ iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted G
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
 * [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
+
 
 ## Setup and Installation
 
