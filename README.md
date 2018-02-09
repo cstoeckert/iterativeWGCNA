@@ -26,6 +26,7 @@ Greenfest-Allen et. al 2017. iterativeWGCNA: iterative refinement to improve mod
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
 * [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
+* [Segmentation Faults, missing C libs, etc](#segmentation-faults-missing-c-libs-etc)
 
 
 ## Setup and Installation
@@ -281,6 +282,18 @@ With this fix you should be able to build rpy2 from the downloaded source as fol
 python setup.py install
 ```
 
+### Segmentation Faults, missing C libs, etc
 
+iterativeWGCNA is written in Python but has dependencies on R and the rpy2 Python-R interface that both rely on C libraries.
 
+If iterativeWGCNA is crashing as soon as it starts due to a segmentation fault, or you get an error along the lines of 
 
+```bash
+ImportError: <some C library>.so.0: cannot open shared object file: No such file or directory
+```
+
+then you are having C-related troubles.
+
+Most likely, you are using the Conda/Anaconda package and environment system (or both) which has known issues with R and R-interfaces such as rpy2.  
+
+Many of these issues have already been addressed in user groups/issue trackers for [Anaconda](https://groups.google.com/a/anaconda.com/forum/#!forum/anaconda), [conda-forge](https://github.com/conda-forge/conda-forge.github.io/issues/) and [ryp2](https://bitbucket.org/rpy2/rpy2/issues).
