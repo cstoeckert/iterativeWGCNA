@@ -69,10 +69,10 @@ findCloseModules <- function(similarityMatrix, cutHeight) {
      modulesFound <- sum(comparison) > 0
 print(cutHeight)
 
-     print(d)
-     print(comparison)
-     print(modulesFound)
-print(min(comparison))
+     ## print(d)
+     ## print(comparison)
+     ## print(modulesFound)
+     ## print(min(comparison))
      if (modulesFound) {
          # indexes of closest modules
          indexes <- which(d == min(comparison), arr.ind = TRUE)

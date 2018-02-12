@@ -18,8 +18,9 @@ class Eigengenes(object):
     manage and manipulate eigengene matrices
     '''
 
-    def __init__(self, matrix=None):
-        self.logger = logging.getLogger('iterativeWGCNA.Modules')
+    def __init__(self, matrix=None, debug=False):
+        self.debug = debug
+        self.logger = logging.getLogger('iterativeWGCNA.Eigengenes')
         self.matrix = matrix
 
 
@@ -109,7 +110,31 @@ class Eigengenes(object):
         '''
         return a submatrix
         '''
-        return self.matrix.rx(ro.StrVector(modules), True)
+        if self.debug:
+            self.logger.debug("Extracting eigengenes for the following modules:")
+            self.logger.debug(modules)
+
+        if self.debug:
+            self.logger.debug("Converting module list to ro.StrVector; see R-log")
+            ro.r("print('Converting module list to ro.StrVector to extract eigengenes:')")
+
+        vector = ro.StrVector(modules)
+
+        if self.debug:
+            self.logger.debug(vector)
+
+        if self.debug:
+            self.logger.debug("Extracted submatrix, see R-log")
+            ro.r("print('Extracted eigengene submatrix:')")
+
+
+        newMatrix = self.matrix.rx(vector, True)
+
+        if self.debug:
+            self.logger.debug(newMatrix)
+
+        return newMatrix
+
 
 
     def is_empty(self):
@@ -131,5 +156,8 @@ class Eigengenes(object):
         recalculate eigengenes given membership
         and profiles
         '''
-        manager = WgcnaManager(profiles, {'power':power})
-        self.matrix = rsnippets.extractRecalculatedEigengenes(manager.module_eigengenes(membership.values()), self.samples())
+        manager = WgcnaManager(profiles, {'power':power}, debug=self.debug)
+
+        self.matrix = rsnippets.extractRecalculatedEigengenes(
+            manager.module_eigengenes(membership.values()),
+            self.samples())

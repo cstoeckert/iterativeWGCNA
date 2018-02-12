@@ -294,6 +294,6 @@ ImportError: <some C library>.so.0: cannot open shared object file: No such file
 
 then you are having C-related troubles.
 
-Most likely, you are using the Conda/Anaconda package and environment system (or both) which has known issues with R and R-interfaces such as rpy2.  
+Most likely, you are using the Anaconda package and environment system which has known issues with R and R-interfaces such as rpy2.
 
 Many of these issues have already been addressed in user groups/issue trackers for [Anaconda](https://groups.google.com/a/anaconda.com/forum/#!forum/anaconda), [conda-forge](https://github.com/conda-forge/conda-forge.github.io/issues/) and [ryp2](https://bitbucket.org/rpy2/rpy2/issues).

@@ -135,6 +135,10 @@ def parse_command_line_args():
                         help="print status messages",
                         action='store_true')
 
+    parser.add_argument('--debug',
+                        help="print debugging messages",
+                        action='store_true')
+    
     parser.add_argument('-p', '--wgcnaParameters',
                         metavar='<param list>',
                         help="comma separated list of parameters to be passed to WGCNA's "

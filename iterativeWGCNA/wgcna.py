@@ -15,7 +15,7 @@ class WgcnaManager(RManager):
     wrappers for running WGCNA functions
     an extension of the RManager
     '''
-    def __init__(self, data, params):
+    def __init__(self, data, params, debug=False):
         RManager.__init__(self, data, params)
         self.logger = logging.getLogger('iterativeWGCNA.WgcnaManager')
         self.adjacencyMatrix = None
@@ -23,7 +23,7 @@ class WgcnaManager(RManager):
         self.dissimilarityMatrix = None
         self.geneTree = None
         self.moduleColors = None
-
+        self.debug = debug
         return None
 
 
@@ -169,13 +169,28 @@ class WgcnaManager(RManager):
         module membership (gene -> membership dict)
         '''
 
+        if self.debug:
+            self.logger.debug("Running WGCNA moduleEigengenes function")
+            self.logger.debug("Module assignments:")
+            self.logger.debug(membership)
+
         params = {}
         params['softPower'] = self.params['power'] if 'power' in self.params else 6
         params['expr'] = base().as_data_frame(self.transpose_data())
-        params['colors'] = ro.StrVector(membership)
+
+        if self.debug:
+            self.logger.debug("Is sequence membership? " + str(type(membership)))
+            self.logger.debug("Converting to list")
+            self.logger.debug(list(membership))
+            self.logger.debug("Converting membership list to ro.StrVector; see R-log")
+            ro.r("print('Converting membership list to ro.StrVector for WGCNA moduleEigengenes:')")
+
+        params['colors'] = ro.StrVector(list(membership))
+
+        if self.debug:
+            self.logger.debug(params['colors'])
 
         return wgcna().moduleEigengenes(**params)
-        
 
 
     def plot_eigengene_network(self):

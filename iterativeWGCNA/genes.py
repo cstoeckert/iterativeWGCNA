@@ -25,7 +25,7 @@ class Genes(object):
     connectivity
     '''
 
-    def __init__(self, exprData):
+    def __init__(self, exprData, debug=False):
         '''
         initialize an OrderedDict of genes
         from the row.names of the expression
@@ -40,6 +40,7 @@ class Genes(object):
 
         self.size = len(self.genes)
         self.iteration = None
+        self.debug = debug
 
 
     def get_module(self, gene):
@@ -456,8 +457,13 @@ class Genes(object):
                 self.__update_module_kME(m1, eigengenes.get_module_eigengene(m2))
 
                 modules = self.get_modules()
+                classifiedGeneMembership = self.get_gene_membership(classifiedGenes)
+                if self.debug:
+                    self.logger.debug("Getting module assignments for classified genes")
+                    self.logger.debug(classifiedGeneMembership)
+
                 eigengenes.recalculate(classifiedGeneProfiles,
-                                       self.get_gene_membership(classifiedGenes))
+                                       classifiedGeneMembership)
 
             else:
                 noMergesFound = True
@@ -507,7 +513,7 @@ class Genes(object):
         return count
 
 
-    def load_membership(self, iteration):
+    def load_membership(self):
         '''
         loads membership for a given iteration
         '''
@@ -515,7 +521,7 @@ class Genes(object):
         membership = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                                header=True, row_names=1, as_is=True)
 
-        index = membership.names.index(iteration)
+        index = membership.names.index('Module')
 
         classifiedCount = 0
         unclassifiedCount = 0
