@@ -184,8 +184,8 @@ class IterativeWGCNA(object):
         self.merge_close_modules('final-')
         self.reassign_genes_to_best_fit_module()
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
-        self.genes.write('adjusted-merge-')
-        self.eigengenes.write('adjusted-merge-')
+        self.genes.write('adjusted-merge-' + str(self.args.finalMergeCutHeight) + '-')
+        self.eigengenes.write('adjusted-merge-' + str(self.args.finalMergeCutHeight) + '-')
         # self.transpose_output_files()
 
 
