@@ -1,15 +1,17 @@
 # pylint: disable=invalid-name
 # pylint: disable=no-self-use
 '''
-R functions
+Wrappers for R functions;
+performs conversions to rpy2.robjects
+where required
 '''
 
 import logging
-from collections import OrderedDict
 import rpy2.robjects as ro
+from collections import OrderedDict
+
 # import rpy2.rlike.container as rlc
 from .imports import base, pheatmap, graphics, rsnippets
-from iterativeWGCNA.io.utils import write_data_frame
 
 class RManager(object):
     '''
@@ -143,7 +145,7 @@ class RManager(object):
         '''
         self.params['x'] = ro.FloatVector(self.data)
         self.params['labels'] = False
-        
+
         if params is not None:
             self.params.update(params)
 

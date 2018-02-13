@@ -61,7 +61,7 @@ degree <- function(adjMatrix, members, threshold) {
 }
 
 
-# find close two closest modules given 
+# find two closest modules given a similarity threshold
 findCloseModules <- function(similarityMatrix, cutHeight) {
      returnVal <- NULL
      d <- 1 - similarityMatrix
@@ -69,10 +69,6 @@ findCloseModules <- function(similarityMatrix, cutHeight) {
      modulesFound <- sum(comparison) > 0
 print(cutHeight)
 
-     print(d)
-     print(comparison)
-     print(modulesFound)
-print(min(comparison))
      if (modulesFound) {
          # indexes of closest modules
          indexes <- which(d == min(comparison), arr.ind = TRUE)

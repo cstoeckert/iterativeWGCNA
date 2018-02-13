@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='iterativeWGCNA',
       version='1.1.2',
@@ -11,8 +11,8 @@ setup(name='iterativeWGCNA',
       author='Emily Greenfest-Allen',
       author_email='allenem@pennmedicine.upenn.edu',
       license='GNU',
-      packages=['iterativeWGCNA'],
-      install_requires=['rpy2'],
+      packages=find_packages(),
+      install_requires=['rpy2','matplotlib'],
       keywords=['network', 'WGCNA', 'gene expression', 'bioinformatics'],
       scripts=['bin/iterativeWGCNA'],
       zip_safe=False)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Convenience wrapper for running iterativeWGCNA directly from source tree.'''
+'''Run iterativeWGCNA'''
 
 # Installation workaround - see README
 # import readline

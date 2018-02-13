@@ -25,7 +25,7 @@ class Genes(object):
     connectivity
     '''
 
-    def __init__(self, exprData):
+    def __init__(self, exprData, debug=False):
         '''
         initialize an OrderedDict of genes
         from the row.names of the expression
@@ -40,6 +40,7 @@ class Genes(object):
 
         self.size = len(self.genes)
         self.iteration = None
+        self.debug = debug
 
 
     def get_module(self, gene):
@@ -272,7 +273,7 @@ class Genes(object):
         current iteration
         '''
         kmeVector = None
-        if 'final' in prefix:
+        if 'final' in prefix or 'merge' in prefix:
             classifiedGenes = self.get_classified_genes()
             geneKME = self.__extract_kME()
             kmeVector = [kME for gene, kME in geneKME.items() if gene in classifiedGenes]
@@ -456,8 +457,13 @@ class Genes(object):
                 self.__update_module_kME(m1, eigengenes.get_module_eigengene(m2))
 
                 modules = self.get_modules()
+                classifiedGeneMembership = self.get_gene_membership(classifiedGenes)
+                if self.debug:
+                    self.logger.debug("Getting module assignments for classified genes")
+                    self.logger.debug(classifiedGeneMembership)
+
                 eigengenes.recalculate(classifiedGeneProfiles,
-                                       self.get_gene_membership(classifiedGenes))
+                                       classifiedGeneMembership)
 
             else:
                 noMergesFound = True
@@ -507,25 +513,40 @@ class Genes(object):
         return count
 
 
-    def load_membership(self, iteration):
+    def load_membership(self, fileName=None):
         '''
-        loads membership for a given iteration
+        loads membership
         '''
-        fileName = "final-membership.txt"
+        if fileName is None:
+            fileName = "final-membership.txt"
+
         membership = ro.DataFrame.from_csvfile(fileName, sep='\t',
                                                header=True, row_names=1, as_is=True)
 
-        index = membership.names.index(iteration)
+        if self.debug:
+            self.logger.debug("Loaded membership from file " + fileName + "; see R-log")
+            ro.r("print('Loaded membership from file -- head of file:')")
+            self.logger.debug(membership.head())
+
+        index = membership.names.index('Module') + 1 # add 1 b/c of python/rpy2/R inconsistency
+
+        if self.debug:
+            self.logger.debug("Adjusted index of Module column: " + str(index))
 
         classifiedCount = 0
         unclassifiedCount = 0
         for g in self.genes:
-            module = membership.rx(g, index)[0]
+            gStr = ro.StrVector([str(g)])
+            # strange, but necessary so that rpy2 will treat numeric gene ids as strings
+            # python str() conversion did not work
+
+            module = membership.rx(gStr[0], index)[0]
+
             if module == 'UNCLASSIFIED':
                 unclassifiedCount = unclassifiedCount + 1
             else:
                 classifiedCount = classifiedCount + 1
             self.__update_module(g, module)
 
-        self.logger.info("Loaded " + classifiedCount + " classified genes")
-        self.logger.info("Loaded " + unclassifiedCount + " unclassified genes")
+        self.logger.info("Loaded " + str(classifiedCount) + " classified genes")
+        self.logger.info("Loaded " + str(unclassifiedCount) + " unclassified genes")
