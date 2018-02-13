@@ -1,5 +1,13 @@
 # iterativeWGCNA: a WGCNA extension
 
+## New Release Available
+
+* __iterativeWGCNA 1.1.3 now available__
+  * added script to adjust final module merge
+	* see [Add-ons](#add-ons) and updated [Output Files](#output-files) for more information
+  * fixed Python 3.3+ bug with converting odict_values to ro.StrVector
+  * added `--debug` option; currently only prints extensive debugging statements for module merge stage
+
 ## Synopsis
 
 iterativeWGCNA provides a Python-wrapped extension for the R program [Weighted Gene Correlation Network Analysis](https://github.com/cran/WGCNA) (WGCNA) that improves the robustness of network-based classifications (modules) inferred from whole-transcriptome gene expression datasets.
@@ -21,11 +29,13 @@ Greenfest-Allen et. al 2017. iterativeWGCNA: iterative refinement to improve mod
 ### Usage
 
 * [Running iterativeWGCNA](#running-iterativewgcna)
+* [Add-ons](#add-ons)
   
 ### Troubleshooting
 
 * [libreadline.so.6: undefined symbol](#libreadlineso6-undefined-symbol)
 * [Cannot install rpy2 on OSX](#cannot-install-rpy2-with-latest-r-version-34x-on-macos)
+* [Segmentation Faults, missing C libs, etc](#segmentation-faults-missing-c-libs-etc)
 
 
 ## Setup and Installation
@@ -49,6 +59,7 @@ iterativeWGCNA requires that the following R packages be installed:
 iterativeWGCNA requires Python version 2.7 or higher.  It is designed to be future compatible with Python 3+.  iterativeWGCNA requires the following Python packages:
 
 * [rpy2](https://pypi.python.org/pypi/rpy2): a Python interface for R (v. 2.7.9+)
+* [matplotlib](https://matplotlib.org/)
 
 > NOTE: the most recent version of rpy2 requires python 3.x
 
@@ -60,7 +71,13 @@ iterativeWGCNA can be run without installing the package as long as the requisit
 
 > iterativeWGCNA is reposited in the Python Package Index (PyPI) and can be installed via `pip` or `easy_install`.
 
-To install the iterativeWGCNA package from an archived release or from git, use the `python setup.py` script as folows:
+```bash
+pip install iterativeWGCNA
+```
+
+This package is tied to the tagged releases on GitHub.
+
+To install the iterativeWGCNA package from the git master, clone and then run the `python setup.py` script as folows:
 
 ```bash
 git clone https://github.com/cstoeckert/iterativeWGCNA.git
@@ -77,6 +94,13 @@ git clone https://github.com/cstoeckert/iterativeWGCNA.git
 cd iterativeWGCNA
 python setup.py install --user
 ```
+
+Alternatively, you can also use `pip` to install from the git master:
+
+```bash
+pip install git+git://github.com/cstoeckert/iterativeWGCNA.git
+```
+
 
 ## Usage
 
@@ -215,9 +239,12 @@ The directory structure and output files are as follows:
 │   ├── iterativeWGCNA.log: main log file for the iterativeWGCNA run
 │   ├── iterativeWGCNA-R.log: log file for R; catches R errors and R warning messages
 │   ├── gene-counts.txt: tally of number of genes fit and residual to the fit with each iteration
-│   ├── final-eigengenes.txt: eigengenes for final modules after final network assembly and merging of close modules
-│   ├── final-kme-histogram.pdf: histogram of eigengene connectivities (kME) in the final classification
-│   ├── final-membership.txt: gene-module assignments and kME after final iteration and merge
+│   ├── final-eigengenes.txt: eigengenes for final modules after final network assembly (before merge)
+│   ├── final-kme-histogram.pdf: histogram of eigengene connectivities (kME) in the final classification (before merge)
+│   ├── final-membership.txt: gene-module assignments and kME after final iteration (before merge)
+│   ├── merge-<finalMergeCutHeight>-eigengenes.txt: recalculated eigengenes for modules retained after merging close modules
+│   ├── merge-<finalMergeCutHeight>-kme-histogram.pdf: histogram of eigengene connectivities (kME) after merging close modules
+│   ├── merge-<finalMergeCutHeight>-membership.txt: gene-module assignments and kME after merging close modules
 │   ├── passN
 │   │   ├── initial-pass-expression-set.txt: pass input
 │   │   ├── kme_histogram.pdf: histogram of eigengene connectivities for genes classified during pass
@@ -231,6 +258,55 @@ The directory structure and output files are as follows:
 │   │   │   ├── wgcna-kme_histogram.pdf: kME histogram based on WGCNA classification
 │   │   │   ├── wgcna-membership.txt: gene membership from WGCNA classification
 ```
+
+> Note: as of release 1.1.3, iterativeWGCNA now outputs two sets of files containing the final classification.  Those prefixed with `final-` report the penultimate module membership assignments and eigengenes; i.e. result at the algorithm convergence.  Those prefixed with `merge-` report the final module assignements determined after merging close modules and reassessing module memberships after the merge.
+
+### Add-ons
+
+1. [Merge Close Modules](#merge-close-modules)
+
+#### Merge Close Modules
+
+Script for running the final-module merge. Allows users to choose a different merge-threshold without having to rerun the entire iterativeWGCNA classification.
+
+The merge script depends on the following options:
+
+```diff
+-i <gene expression file>, --inputFile <gene expression file>
+   full path to input gene expression file; if full path is not provided,
+   assumes the file is in the working (output) directory
++ required
+   
+-o <output dir>, --workingDir <output dir>
+   R working directory; where output from the iterativeWGCNA run is stored
+   default: current directory
++ at minimum files final-membership.txt and final-eigengenes.txt must be in the directory
+
+   	
+-f, --finalMergeCutHeight <cut height>
+	cut height (max dissimilarity) for final module merge
+	(after algorithm convergence); [0, 1.0], default=0.05
+
+-p <param list>, --wgcnaParameters <param list>
+   comma separated list of parameter=value pairs required to assess module similarity and gene reassignment
+   The following parameters are required (defaults will be used if not specified):
++ minKMEtoStay --> should be the same as used when running iterativeWGCNA; default 0.8
++ reassignThreshold --> p-value cut-off for shifting a gene to module assignment; default 0.05
+```
+
+If the iterativeWGCNA package was installed, run as follows:
+
+```sh
+iterativeWGCNA_merge -i <input_file_path> -o <iterativeWGCNA_output_dir> --finalMergeCutHeight <float> -p minKMEtoStay=<float;same_as_iterativeWGCNA_run>
+```
+
+alternative, it can be run using the wrapper script in the iterativeWGCNA directory
+
+
+```sh
+python merge_close_modules.py -i <input_file_path> -o <iterativeWGCNA_output_dir> --finalMergeCutHeight <float> -p minKMEtoStay=<float;same_as_iterativeWGCNA_run>
+```
+
 
 ## Troubleshooting
 
@@ -281,6 +357,18 @@ With this fix you should be able to build rpy2 from the downloaded source as fol
 python setup.py install
 ```
 
+### Segmentation Faults, missing C libs, etc
 
+iterativeWGCNA is written in Python but has dependencies on R and the rpy2 Python-R interface that both rely on C libraries.
 
+If iterativeWGCNA is crashing as soon as it starts due to a segmentation fault, or you get an error along the lines of 
 
+```bash
+ImportError: <some C library>.so.0: cannot open shared object file: No such file or directory
+```
+
+then you are having C-related troubles.
+
+Most likely, you are using the Anaconda package and environment system which has known issues with R and R-interfaces such as rpy2.
+
+Many of these issues have already been addressed in user groups/issue trackers for [Anaconda](https://groups.google.com/a/anaconda.com/forum/#!forum/anaconda), [conda-forge](https://github.com/conda-forge/conda-forge.github.io/issues/) and [ryp2](https://bitbucket.org/rpy2/rpy2/issues).

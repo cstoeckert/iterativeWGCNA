@@ -37,6 +37,9 @@ class IterativeWGCNA(object):
         if not report:
             self.__verify_clean_working_dir()
 
+        if report == 'merge':
+            self.args.enableWGCNAThreads = False
+
         self.__initialize_log(report)
         self.logger.info(strftime("%c"))
 
@@ -44,25 +47,27 @@ class IterativeWGCNA(object):
         if not report:
             self.__log_parameters()
 
+        if self.args.debug:
+            warning("Running in DEBUG mode.")
+            warning("Rpy2 will print debugging messages and variable (e.g., matrix/vector) contents to the R log")
+            warning("Thus, empty debug statements 'DEBUG:      ' in the iterativeWGCNA log should have a corresponding output in the R log")
+
         # load expression data and
         # initialize Genes object
         # to store results
         self.profiles = None
         self.__load_expression_profiles()
         self.__log_input_data()
+        self.genes = Genes(self.profiles, debug=self.args.debug)
+        self.eigengenes = Eigengenes(debug=args.debug)
+        self.modules = None # will be hash of module name to color for plotting
 
         if not report:
-            self.genes = None
-            self.eigengenes = Eigengenes()
-            self.modules = None # hash of module name to color for plotting
-
             self.passCount = 1
             self.iterationCount = 1
             self.iteration = None # unique label for iteration
-
             self.algorithmConverged = False
             self.passConverged = False
-            self.genes = Genes(self.profiles)
 
 
     def __verify_clean_working_dir(self):
@@ -99,7 +104,7 @@ class IterativeWGCNA(object):
             moduleCount = self.genes.count_modules(iterationGenes)
             classifiedGeneCount = self.genes.count_classified_genes(iterationGenes)
 
-            self.write_gene_counts(len(iterationGenes), classifiedGeneCount)
+            self.write_run_summary(len(iterationGenes), classifiedGeneCount)
 
             # if there are no residuals
             # (classified gene count = number of genes input)
@@ -150,26 +155,37 @@ class IterativeWGCNA(object):
 
         self.iteration = 'FINAL'
         self.genes.iteration = self.iteration
+        self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
+        self.__summarize_classification('final-')
+
+        # output current eigengenes for all modules, not just ones from last pass
+        self.eigengenes.load_matrix_from_file('eigengenes.txt')
+        modules = self.genes.get_modules()
+        self.eigengenes.update_to_subset(modules)
+        self.eigengenes.write('final-')
+
+        self.iteration = 'MERGED'
+        self.genes.iteration = self.iteration
         self.merge_close_modules()
         self.reassign_genes_to_best_fit_module()
 
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
 
-        self.__summarize_classification('final-')
-        self.eigengenes.write('final-')
+        self.__summarize_classification('merged-' + str(self.args.finalMergeCutHeight) + '-')
+        self.eigengenes.write('merged-' + str(self.args.finalMergeCutHeight) + '-')
         os.remove("eigengenes.txt")
 
 
-    def merge_close_modules_from_output(self, iteration):
+    def merge_close_modules_from_output(self):
         '''
         load data from output and remerge
         '''
-        self.genes.load_membership(iteration)
-        self.merge_close_modules()
+        self.genes.load_membership()
+        self.merge_close_modules('final-')
         self.reassign_genes_to_best_fit_module()
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
-        self.genes.write('adjusted-merge-')
-        self.eigengenes.write('adjusted-merge-')
+        self.genes.write('adjusted-merge-' + str(self.args.finalMergeCutHeight) + '-')
+        self.eigengenes.write('adjusted-merge-' + str(self.args.finalMergeCutHeight) + '-')
         # self.transpose_output_files()
 
 
@@ -218,7 +234,7 @@ class IterativeWGCNA(object):
             warning("Reassigned " + str(count) + " genes in final kME review.")
 
 
-    def merge_close_modules(self):
+    def merge_close_modules(self, prefix=''):
         '''
         merge close modules based on similiarity in eigengenes
         update membership, kME, and eigengenes accordingly
@@ -229,7 +245,7 @@ class IterativeWGCNA(object):
         modules = self.genes.get_modules()
         self.__log_final_modules(modules)
 
-        self.eigengenes.load_matrix_from_file('eigengenes.txt')
+        self.eigengenes.load_matrix_from_file(prefix + 'eigengenes.txt')
         self.eigengenes.update_to_subset(modules)
 
         self.eigengenes = self.genes.merge_close_modules(self.eigengenes,
@@ -282,7 +298,7 @@ class IterativeWGCNA(object):
         output gene summaries for the iteration
         incl: text summary of iteration, updated gene membership, kme histogram
         '''
-        if 'final' in prefix:
+        if 'final' in prefix or 'merge' in prefix:
             self.genes.write(prefix)
         else:
             self.genes.write(prefix, self.iteration)
@@ -319,7 +335,7 @@ class IterativeWGCNA(object):
             sys.exit(1)
 
 
-    def __initialize_R(self, report=False):
+    def __initialize_R(self, logType='run'):
         '''
         initialize R workspace and logs
         '''
@@ -330,8 +346,10 @@ class IterativeWGCNA(object):
         ro.r['options'](warn=-1)
 
         # r log
-        logFile = 'summarize-network-R.log' if report \
-          else 'iterativeWGCNA-R.log'
+        logFile = 'iterativeWGCNA-R.log'
+        if logType == 'merge':
+            logFile = 'adjust-merge-' + str(self.args.finalMergeCutHeight) + '-' + logFile
+
         rLogger = base().file(logFile, open='wt')
         base().sink(rLogger, type=base().c('output', 'message'))
 
@@ -339,16 +357,16 @@ class IterativeWGCNA(object):
             wgcna().enableWGCNAThreads()
 
 
-    def __initialize_log(self, logType='iterative'):
+    def __initialize_log(self, logType='run'):
         '''
         initialize log by setting path and file format
         '''
+        logName = 'iterativeWGCNA.log'
         if logType == 'summary':
-            logName = 'summarize-network.log'
+            logName = 'summarize-network-' + logName
         elif logType == 'merge':
-            logName = 'adjust-merge.log'
-        else:
-            logName = 'iterativeWGCNA.log'
+            logName = 'adjust-merge-' + str(self.args.finalMergeCutHeight) + '-' + logName
+
         logging.basicConfig(filename=self.args.workingDir + '/' + logName,
                             filemode='w', format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
@@ -439,11 +457,11 @@ class IterativeWGCNA(object):
             warning(modules)
 
 
-    def write_gene_counts(self, initial, fit):
+    def write_run_summary(self, initial, fit):
         '''
         writes the number of kept and dropped genes at the end of an iteration
         '''
-        fileName = 'gene-counts.txt'
+        fileName = 'iterative-wgcna-run-summary.txt'
         try:
             os.stat(fileName)
         except OSError:
