@@ -37,6 +37,9 @@ class IterativeWGCNA(object):
         if not report:
             self.__verify_clean_working_dir()
 
+        if report == 'merge':
+            self.args.enableWGCNAThreads = False
+
         self.__initialize_log(report)
         self.logger.info(strftime("%c"))
 
@@ -55,19 +58,16 @@ class IterativeWGCNA(object):
         self.profiles = None
         self.__load_expression_profiles()
         self.__log_input_data()
+        self.genes = Genes(self.profiles, debug=self.args.debug)
+        self.eigengenes = Eigengenes(debug=args.debug)
+        self.modules = None # will be hash of module name to color for plotting
 
         if not report:
-            self.genes = None
-            self.eigengenes = Eigengenes(debug=args.debug)
-            self.modules = None # hash of module name to color for plotting
-
             self.passCount = 1
             self.iterationCount = 1
             self.iteration = None # unique label for iteration
-
             self.algorithmConverged = False
             self.passConverged = False
-            self.genes = Genes(self.profiles, debug = self.args.debug)
 
 
     def __verify_clean_working_dir(self):
@@ -104,7 +104,7 @@ class IterativeWGCNA(object):
             moduleCount = self.genes.count_modules(iterationGenes)
             classifiedGeneCount = self.genes.count_classified_genes(iterationGenes)
 
-            self.write_gene_counts(len(iterationGenes), classifiedGeneCount)
+            self.write_run_summary(len(iterationGenes), classifiedGeneCount)
 
             # if there are no residuals
             # (classified gene count = number of genes input)
@@ -181,7 +181,7 @@ class IterativeWGCNA(object):
         load data from output and remerge
         '''
         self.genes.load_membership()
-        self.merge_close_modules('final')
+        self.merge_close_modules('final-')
         self.reassign_genes_to_best_fit_module()
         self.__log_gene_counts(self.genes.size, self.genes.count_classified_genes())
         self.genes.write('adjusted-merge-')
@@ -335,7 +335,7 @@ class IterativeWGCNA(object):
             sys.exit(1)
 
 
-    def __initialize_R(self, report=False):
+    def __initialize_R(self, logType='run'):
         '''
         initialize R workspace and logs
         '''
@@ -346,8 +346,10 @@ class IterativeWGCNA(object):
         ro.r['options'](warn=-1)
 
         # r log
-        logFile = 'summarize-network-R.log' if report \
-          else 'iterativeWGCNA-R.log'
+        logFile = 'iterativeWGCNA-R.log'
+        if logType == 'merge':
+            logFile = 'adjust-merge-' + str(self.args.finalMergeCutHeight) + '-' + logFile
+
         rLogger = base().file(logFile, open='wt')
         base().sink(rLogger, type=base().c('output', 'message'))
 
@@ -355,16 +357,16 @@ class IterativeWGCNA(object):
             wgcna().enableWGCNAThreads()
 
 
-    def __initialize_log(self, logType='iterative'):
+    def __initialize_log(self, logType='run'):
         '''
         initialize log by setting path and file format
         '''
+        logName = 'iterativeWGCNA.log'
         if logType == 'summary':
-            logName = 'summarize-network.log'
+            logName = 'summarize-network-' + logName
         elif logType == 'merge':
-            logName = 'adjust-merge.log'
-        else:
-            logName = 'iterativeWGCNA.log'
+            logName = 'adjust-merge-' + str(self.args.finalMergeCutHeight) + '-' + logName
+
         logging.basicConfig(filename=self.args.workingDir + '/' + logName,
                             filemode='w', format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
@@ -455,11 +457,11 @@ class IterativeWGCNA(object):
             warning(modules)
 
 
-    def write_gene_counts(self, initial, fit):
+    def write_run_summary(self, initial, fit):
         '''
         writes the number of kept and dropped genes at the end of an iteration
         '''
-        fileName = 'gene-counts.txt'
+        fileName = 'iterative-wgcna-run-summary.txt'
         try:
             os.stat(fileName)
         except OSError:

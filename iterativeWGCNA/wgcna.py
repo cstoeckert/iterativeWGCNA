@@ -179,9 +179,6 @@ class WgcnaManager(RManager):
         params['expr'] = base().as_data_frame(self.transpose_data())
 
         if self.debug:
-            self.logger.debug("Is sequence membership? " + str(type(membership)))
-            self.logger.debug("Converting to list")
-            self.logger.debug(list(membership))
             self.logger.debug("Converting membership list to ro.StrVector; see R-log")
             ro.r("print('Converting membership list to ro.StrVector for WGCNA moduleEigengenes:')")
 

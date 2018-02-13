@@ -108,13 +108,13 @@ numericLabels=TRUE
     return inputFileFormatHelp + '\n\n' + wgcnaParametersHelp
 
 
-def parse_command_line_args():
+def parse_command_line_args(program='iterativeWGCNA', description='perform iterativeWGCNA analysis'):
     '''
     parse command line args
     '''
 
-    parser = argparse.ArgumentParser(prog='iterativeWGCNA',
-                                     description="perform interative WGCNA analysis",
+    parser = argparse.ArgumentParser(prog=program,
+                                     description=description,
                                      epilog=helpEpilog(),
                                      formatter_class=argparse.RawTextHelpFormatter)
 
@@ -179,7 +179,7 @@ def set_wgcna_parameter_defaults(params):
         params = {}
 
     params['numericLabels'] = True # override user choice
-        
+    
     if 'networkType' not in params:
         params['networkType'] = 'signed'
     if 'minKMEtoStay' not in params:
@@ -189,10 +189,9 @@ def set_wgcna_parameter_defaults(params):
     if 'minModuleSize' not in params:
         params['minModuleSize'] = 20
     if 'reassignThreshold' not in params:
-        params['reassignThreshold'] = 0.000001 # 1e-6
+        params['reassignThreshold'] = 0.05 # 0.000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
-  
 
     return params
 
@@ -261,116 +260,7 @@ def parse_summary_command_line_args():
                         + "connections supported by a correlation >= threshold",
                         type=restricted_float)
 
-    parser.add_argument('-preMerge',
-                        action='store_true',
-                        help="use membership from final iteration (before merging)")
 
     return parser.parse_args()
 
 
-
-def parse_adjust_merge_command_line_args():
-    '''
-    parse command line args for adjusting the merge
-    '''
-
-    parser = argparse.ArgumentParser(prog='iterativeWGCNA network summary',
-                                     description="regenerate final merge",
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('-i', '--inputFile',
-                        metavar='<gene expression file>',
-                        help="full path to input gene expression file; "
-                        + "if full path is not provided,\n"
-                        + "assumes the file is in the working directory\n;"
-                        + "see below for input file format",
-                        required=True)
-
-    parser.add_argument('-o', '--workingDir',
-                        help="R working directory; where output will be saved",
-                        metavar='<output dir>',
-                        default=getcwd())
-
-    parser.add_argument('-v', '--verbose',
-                        help="print status messages",
-                        action='store_true')
-
-  
-    parser.add_argument('--enableWGCNAThreads',
-                        help="enable WGCNA to use threading;\nsee WGCNA manual",
-                        action='store_true')
-
-    parser.add_argument('--mergeCutHeight',
-                        metavar='<cut height>',
-                        default=0.15,
-                        help="max dissimilarity (dendrogram cut height)\n"
-                        + "between eigengenes for merging",
-                        type=restricted_float)
-
-    parser.add_argument('--reassignThreshold',
-                        metavar='<reassign threshold>',
-                        default=0.000001,
-                        help="p-value for reassigning genes to modules\n",
-                        type=restricted_float)
-
-    parser.add_argument('--minKMEtoStay',
-                        help="provide minKMEtoStay used for network generation",
-                        default=0.85,
-                        metavar='<minKMEtoStay>',
-                        type=restricted_float)
-     
-    return parser.parse_args()
-
-
-
-def parse_iteration_summary_command_line_args():
-    '''
-    parse command line args for summary
-    '''
-
-    parser = argparse.ArgumentParser(prog='iterativeWGCNA iteration summary',
-                                     description="summarize results from an iteration of interative WGCNA",
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('-i', '--iteration',
-                        metavar='<iteration>',
-                        help="iteration to be summarized",
-                        required=True)
-
-    parser.add_argument('-o', '--workingDir',
-                        help="R working directory; where output will be saved",
-                        metavar='<output dir>',
-                        default=getcwd())
-
-    parser.add_argument('-v', '--verbose',
-                        help="print status messages",
-                        action='store_true')
-
-    parser.add_argument('-p', '--power',
-                        metavar='<power law beta>',
-                        help="power law beta for weighting the adjacency matrix",
-                        default=6,
-                        type=int)
-
-    parser.add_argument('--signed',
-                        help="generate signed adjacency matrix?",
-                        action='store_true')
-
-    parser.add_argument('--minKMEtoStay',
-                        help="provide minKMEtoStay used for network generation",
-                        default=0.80,
-                        metavar='<minKMEtoStay>',
-                        type=restricted_float)
-
-    parser.add_argument('--enableWGCNAThreads',
-                        help="enable WGCNA to use threading;\nsee WGCNA manual",
-                        action='store_true')
-
-    parser.add_argument('-e', '--edgeWeight',
-                        metavar='<min edge weight>',
-                        default=0.5,
-                        help="min edge weight for network summary; filters for\n"
-                        + "connections supported by a correlation >= threshold",
-                        type=restricted_float)
-
-    return parser.parse_args()
