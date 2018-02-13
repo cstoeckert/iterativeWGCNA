@@ -14,5 +14,5 @@ setup(name='iterativeWGCNA',
       packages=find_packages(),
       install_requires=['rpy2','matplotlib'],
       keywords=['network', 'WGCNA', 'gene expression', 'bioinformatics'],
-      scripts=['bin/iterativeWGCNA'],
+      scripts=['bin/iterativeWGCNA', 'bin/iterativeWGCNA_merge'],
       zip_safe=False)
