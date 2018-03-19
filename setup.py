@@ -7,7 +7,7 @@ setup(name='iterativeWGCNA',
       Weighted Gene Correlation Network Analysis (WGCNA)
       to improve whole-transcriptome gene classification''',
       url='http://github.com/cstoeckert/iterativeWGCNA',
-      download_url='https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.2.tar.gz',
+      download_url='https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.4.tar.gz',
       author='Emily Greenfest-Allen',
       author_email='allenem@pennmedicine.upenn.edu',
       license='GNU',
