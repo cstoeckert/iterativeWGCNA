@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='iterativeWGCNA',
-      version='1.1.2',
+      version='1.1.4',
       description="Iterative application of WGCNA",
       long_description='''Iterative application of
       Weighted Gene Correlation Network Analysis (WGCNA)

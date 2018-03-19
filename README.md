@@ -2,6 +2,10 @@
 
 ## New Release Available
 
+* __iterativeWGCNA 1.1.4 now available__
+  * bug fix: saveTOMs enabled by default as specified in the documentation
+  * bug fix: issue parsing boolean WGCNA parameters (e.g. saveTOMs=FALSE or cosineCorrelation=TRUE) resolved 
+  
 * __iterativeWGCNA 1.1.3 now available__
   * added script to adjust final module merge
 	* see [Add-ons](#add-ons) and updated [Output Files](#output-files) for more information
