@@ -19,7 +19,7 @@ from .expression import Expression
 from .eigengenes import Eigengenes
 from .network import Network
 from .wgcna import WgcnaManager
-from .io.utils import create_dir, read_data, warning, write_data_frame
+from .io.utils import create_dir, read_data, warning, write_data_frame, bulk_gzip
 from .r.imports import base, wgcna, rsnippets
 
 
@@ -267,10 +267,13 @@ class IterativeWGCNA(object):
         self.genes.iteration = self.iteration
         iterationProfiles = self.profiles.gene_expression(iterationGenes)
 
-        blocks = self.run_blockwise_wgcna(iterationProfiles)
+        blocks = self.run_blockwise_wgcna(iterationProfiles, iterationDir)
         if not self.args.skipSaveBlocks:
             rsnippets.saveBlockResult(blocks, iterationProfiles,
                                       os.path.join(iterationDir, 'wgcna-blocks.RData'))
+            if self.args.gzipTOMs:
+                bulk_gzip(iterationDir, 'TOM')
+
 
         # update eigengenes from blockwise result
         # if eigengenes are present (modules detected), evaluate
@@ -308,12 +311,12 @@ class IterativeWGCNA(object):
             self.genes.write_iteration_counts(prefix)
 
 
-    def run_blockwise_wgcna(self, exprData):
+    def run_blockwise_wgcna(self, exprData, workingDir):
         '''
         run WGCNA
         '''
         manager = WgcnaManager(exprData, self.args.wgcnaParameters)
-        manager.set_parameter('saveTOMFileBase', self.iteration + '-TOM')
+        manager.set_parameter('saveTOMFileBase', os.path.join(workingDir, self.iteration + '-TOM'))
         return manager.blockwise_modules()
 
 
