@@ -2,9 +2,11 @@
 
 ## New Release Available
 
-* __iterativeWGCNA 1.1.4 now available__
-  * bug fix: saveTOMs enabled by default as specified in the documentation
-  * bug fix: issue parsing boolean WGCNA parameters (e.g. saveTOMs=FALSE or cosineCorrelation=TRUE) resolved 
+* __iterativeWGCNA 1.1.6 now available__
+  * bug fix: saveTOMs disabled by default but can be enabled by with the option  `--wgcnaParameters "saveTOMs=TRUE"`
+  * bug fix: issue parsing boolean WGCNA parameters (e.g. `saveTOMs=FALSE` or `cosineCorrelation=TRUE`) resolved 
+  * new parameter added: `--gzipTOMs` which will gzip TOM .RData files as generated to save space
+  * new dist available on PyPI
   
 * __iterativeWGCNA 1.1.3 now available__
   * added script to adjust final module merge
@@ -170,7 +172,14 @@ python run_iterative_wgcna.py -h
     
 --skipSaveBlocks
     do not save WGCNA blockwise modules for each iteration
+	also will not save TOMs
 	NOTE: blocks are necessary to generate summary graphics
+	
+--gzipTOMs
+    if the WGCNA parameter saveTOMs is set to TRUE, this will
+	gzip the TOM .RData files
+	NOTE: R is not able to read the .RData.gz files; uncompress
+	first
 	
 -f, --finalMergeCutHeight <cut height>
 	cut height (max dissimilarity) for final module merge
@@ -202,7 +211,7 @@ If WGCNA parameters are not specified, iterativeWGCNA uses the default WGCNA set
 
 ```python
 minModuleSize = 20 # minimum number of genes in a detected module
-saveTOMs = TRUE # save the topological overlap matrices for each block in the block data structure
+saveTOMs = FALSE # save the topological overlap matrices for each block in the block data structure
 minKMEtoStay = 0.8 # minimum eigengene connectivity (kME) required for a gene to be retained in its assigned module
 minCoreKME = 0.8 # if the module does not have minModuleSize genes with eigengene connectivity at least minCoreKME, the module is disbanded
 reassignThreshold = 0.05 # per-set p-value ratio threshold for reassigning genes between modules
@@ -233,7 +242,7 @@ An **iteration** of iterativeWGCNA comprises one run of blockwiseWGCNA followed 
 
 Results from each pass and iteration are saved in a series of directories, labeled as:
 
-> passN: results from the numbered (N) pass
+> passM: results from the numbered (M) pass
 > iN: results from the numbered (N) iteration
 
 The directory structure and output files are as follows:
@@ -249,7 +258,7 @@ The directory structure and output files are as follows:
 │   ├── merge-<finalMergeCutHeight>-eigengenes.txt: recalculated eigengenes for modules retained after merging close modules
 │   ├── merge-<finalMergeCutHeight>-kme-histogram.pdf: histogram of eigengene connectivities (kME) after merging close modules
 │   ├── merge-<finalMergeCutHeight>-membership.txt: gene-module assignments and kME after merging close modules
-│   ├── passN
+│   ├── passM
 │   │   ├── initial-pass-expression-set.txt: pass input
 │   │   ├── kme_histogram.pdf: histogram of eigengene connectivities for genes classified during pass
 │   │   ├── membership.txt: gene-module assignments and kME for genes classfied during pass
@@ -261,9 +270,12 @@ The directory structure and output files are as follows:
 │   │   |   ├── wgcna-blocks.RData: R data object containing input expression data (expression) and results from blockwise WGCNA (blocks)
 │   │   │   ├── wgcna-kme_histogram.pdf: kME histogram based on WGCNA classification
 │   │   │   ├── wgcna-membership.txt: gene membership from WGCNA classification
+│   │   │   ├── passM_iN-TOM.block.X.RData(.gz): TOM for block X generated in passM, iN (if saveTOMs=TRUE; gzipped if --gzipTOMs option specified)
 ```
 
 > Note: as of release 1.1.3, iterativeWGCNA now outputs two sets of files containing the final classification.  Those prefixed with `final-` report the penultimate module membership assignments and eigengenes; i.e. result at the algorithm convergence.  Those prefixed with `merge-` report the final module assignements determined after merging close modules and reassessing module memberships after the merge.
+
+> Note: TOMs are only saved if the wgcnaParameter `saveTOMs` is set to `TRUE`.  With large gene sets (>10,000 genes), these can be very large and take a while to write to file, dramatically slowing down the performace of the algorithm in the early iterations.  To save disk space, specify the paratmer `--gzipTOMs` to gzip .RData files as generated.  Again, this i/o operation may slow down the performance of the algorithm in the early iterations.
 
 ### Add-ons
 

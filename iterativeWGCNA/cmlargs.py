@@ -99,7 +99,7 @@ If parameters are not specified, iterativeWGCNA uses the default WGCNA settings,
 except for the following:
 
 minModuleSize=20
-saveTOMs=TRUE
+saveTOMs=FALSE
 minKMEtoStay=0.8
 minCoreKME=0.8
 networkType=signed
@@ -159,6 +159,10 @@ def parse_command_line_args(program='iterativeWGCNA', description='perform itera
                         + "Also will not saveTOMs.",
                         action='store_true')
 
+    parser.add_argument('--gzipTOMs',
+                        help="gzip TOM RData files\n",
+                        action='store_true')
+
     parser.add_argument('-f', '--finalMergeCutHeight',
                         help="cut height for final merge (after iterations are assembled)",
                         default=0.05,
@@ -196,7 +200,7 @@ def set_wgcna_parameter_defaults(params, skipSaveBlocks):
     if 'power' not in params:
         params['power'] = 6
     if 'saveTOMs' not in params:
-        params['saveTOMs'] = True
+        params['saveTOMs'] = False
     if skipSaveBlocks: # if blocks are not saved; TOMs are not saved
         params['saveTOMs'] = False
 

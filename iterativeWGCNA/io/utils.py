@@ -8,8 +8,23 @@ from sys import stderr
 from math import isnan
 import os
 import re
+from subprocess import check_call
+import gzip
+
 import rpy2.robjects as ro
 from ..r.imports import rsnippets
+
+def bulk_gzip(directory, pattern):
+    '''
+    gzip all files in the directory that match the pattern
+    '''
+    for filename in os.listdir(directory):
+        if pattern in filename:
+            with open(os.path.join(directory, filename), 'rb') as plain_file:
+                with gzip.open(os.path.join(directory, filename + '.gz'), 'wb') as zip_file:
+                    zip_file.writelines(plain_file)
+
+            os.remove(os.path.join(directory, filename)) # remove the old file
 
 
 def xstr(value):
