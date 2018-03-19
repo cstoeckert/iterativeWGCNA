@@ -1,23 +1,2 @@
 
-
-.#README.md
-
-.markdown-preview.html
-
-*.md#
-
 *.pyc
-
-iterativeWGCNA/.Rhistory
-
-*.R#
-
-scripts/operations.R
-
-scripts/.#plot_metanetwork_heatmap.R
-
-scripts/enrichment_analysis.R
-
-scripts/.#plot_metanetwork_heatmap.R
-
-*.py#

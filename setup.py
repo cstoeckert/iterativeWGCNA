@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(name='iterativeWGCNA',
-      version='1.1.2',
+      version='1.1.6',
       description="Iterative application of WGCNA",
       long_description='''Iterative application of
       Weighted Gene Correlation Network Analysis (WGCNA)
       to improve whole-transcriptome gene classification''',
       url='http://github.com/cstoeckert/iterativeWGCNA',
-      download_url='https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.2.tar.gz',
+      download_url='https://github.com/cstoeckert/iterativeWGCNA/archive/v1.1.6.tar.gz',
       author='Emily Greenfest-Allen',
       author_email='allenem@pennmedicine.upenn.edu',
       license='GNU',
