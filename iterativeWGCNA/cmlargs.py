@@ -9,6 +9,7 @@ and validating command line arguments
 import re
 import argparse
 from os import getcwd
+from .io.utils import warning
 
 def parameter_list(strValue):
     '''
@@ -19,14 +20,15 @@ def parameter_list(strValue):
 
     params = {}
     pairs = strValue.split(',')
+
     for p in pairs:
         name, value = p.split('=')
 
         # Test and cast for booleans
-        if value in ['TRUE', 'T', 'True', 't']:
-            value = True
-        elif value in ['FALSE', 'F', 'False', 'f']:
-            value = False
+        if value.upper() in ['TRUE', 'T']:
+            params[name] = True
+        elif value.upper() in ['FALSE', 'F']:
+            params[name] = False
         # Test and cast for integer
         elif value.isdigit():
             params[name] = int(value)
@@ -153,7 +155,8 @@ def parse_command_line_args(program='iterativeWGCNA', description='perform itera
 
     parser.add_argument('--skipSaveBlocks',
                         help="do not save WGCNA blockwise modules for each iteration;\n"
-                        + "NOTE: without blocks summary graphics cannot be generated.",
+                        + "NOTE: without blocks summary graphics cannot be generated.\n"
+                        + "Also will not saveTOMs.",
                         action='store_true')
 
     parser.add_argument('-f', '--finalMergeCutHeight',
@@ -163,12 +166,12 @@ def parse_command_line_args(program='iterativeWGCNA', description='perform itera
                         type=restricted_float)
 
     args = parser.parse_args()
-    args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters)
+    args.wgcnaParameters = set_wgcna_parameter_defaults(args.wgcnaParameters, args.skipSaveBlocks)
 
     return args
 
 
-def set_wgcna_parameter_defaults(params):
+def set_wgcna_parameter_defaults(params, skipSaveBlocks):
     '''
     set default values for WGCNA blockwiseModules
     numericLabels = TRUE
@@ -192,6 +195,10 @@ def set_wgcna_parameter_defaults(params):
         params['reassignThreshold'] = 0.05 # 0.000001 # 1e-6
     if 'power' not in params:
         params['power'] = 6
+    if 'saveTOMs' not in params:
+        params['saveTOMs'] = True
+    if skipSaveBlocks: # if blocks are not saved; TOMs are not saved
+        params['saveTOMs'] = False
 
     return params
 

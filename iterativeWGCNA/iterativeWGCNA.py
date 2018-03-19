@@ -267,7 +267,7 @@ class IterativeWGCNA(object):
         self.genes.iteration = self.iteration
         iterationProfiles = self.profiles.gene_expression(iterationGenes)
 
-        blocks = self.run_blockwise_wgcna(iterationProfiles)
+        blocks = self.run_blockwise_wgcna(iterationProfiles, iterationDir)
         if not self.args.skipSaveBlocks:
             rsnippets.saveBlockResult(blocks, iterationProfiles,
                                       os.path.join(iterationDir, 'wgcna-blocks.RData'))
@@ -308,12 +308,12 @@ class IterativeWGCNA(object):
             self.genes.write_iteration_counts(prefix)
 
 
-    def run_blockwise_wgcna(self, exprData):
+    def run_blockwise_wgcna(self, exprData, workingDir):
         '''
         run WGCNA
         '''
         manager = WgcnaManager(exprData, self.args.wgcnaParameters)
-        manager.set_parameter('saveTOMFileBase', self.iteration + '-TOM')
+        manager.set_parameter('saveTOMFileBase', os.path.join(workingDir, self.iteration + '-TOM'))
         return manager.blockwise_modules()
 
 
